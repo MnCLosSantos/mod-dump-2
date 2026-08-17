@@ -1,243 +1,91 @@
-# MNC Vehicle.LUA Manager
+# 🔧 MnC Vehicle Manager v2
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![FiveM](https://img.shields.io/badge/FiveM-Ready-green.svg)](https://fivem.net/)
 [![QBCore](https://img.shields.io/badge/Framework-QBCore-blue.svg)](https://github.com/qbcore-framework)
 [![Version](https://img.shields.io/badge/Version-2.3.7-brightgreen.svg)]()
 
 ---
 
-## Overview
+## 🌟 Overview
 
-A **comprehensive vehicle management system** for QBCore-based FiveM servers.  
-This script provides an **intuitive UI** for editing and saving vehicle information directly from in-game vehicles, with dynamic dropdowns, auto-pricing, and theme customization.  
-Fully optimized for **QBCore Framework**, **ox_lib notifications**, and seamless integration.
+MnC Vehicle Manager v2 is an admin/developer tool for building out a server's vehicle database. While sitting in any vehicle — including ones not yet added to QBCore — an admin runs `/vehiclelua` to open an NUI editor that auto-detects the vehicle's brand, class, and type, lets them set a name/price/category/shop, and either appends a new entry to a local `vehiclesaves.lua` file or directly patches an existing entry in `qb-core/shared/vehicles.lua` on disk.
 
 ---
 
-## Key Features
+## ✨ Key Features
 
-- **Intuitive UI Editor**  
-  - Accessible via the `/vehiclelua` command while in a vehicle.  
-  - Auto-populates vehicle details (model, name, brand, category, type, shop).  
-  - Dynamic dropdowns for brands, categories, types, and shops based on QB-Core shared vehicle data.  
-  - Supports light and dark themes with smooth transitions.
+**Vehicle Inspector** (`/vehiclelua`)
+- Must be run while seated in a vehicle; reads the current vehicle's model, in-game display name, manufacturer, and GTA vehicle class directly from natives (`GetMakeNameFromVehicleModel`, `GetVehicleClass`, `GetVehicleType`)
+- Ships a full brand-name lookup table (`BrandMap`) that converts raw GTA manufacturer codes (e.g. `UBERMACH`, `SCHAFTER2`) into properly formatted display names, including umlauts (Übermacht, Schäfter)
+- Builds full and "unavailable" (not yet in `QBCore.Shared.Vehicles`) vehicle lists, including every drivable model in the game's vehicle CD image, for cross-referencing in the UI
 
-- **Dynamic Auto-Pricing**  
-  - Calculates vehicle prices based on category, brand, type, and shop.  
-  - Configurable pricing with base prices, brand multipliers, type multipliers, and shop premiums.  
-  - Optional randomization (±5%) for price variation.  
-  - Toggleable auto-pricing in the settings modal.
+**Save / Edit Actions**
+- **Save New Vehicle** — appends a new formatted Lua table entry to `vehiclesaves.lua` in this resource's own folder (does not touch `qb-core` directly)
+- **Replace/Edit Vehicle** — locates an existing model entry inside `qb-core/shared/vehicles.lua` by parsing the file's brace structure, and rewrites that block in place with the edited name/brand/price/category/type/shop, preserving original indentation
+- **Export Chunk** — bulk-appends multiple vehicle entries to `vehiclesaves.lua` in one call, used for exporting large batches from the UI
+- **Create Vehicle List** — generates a `vehiclelist.lua` report of every drivable model on the server, split into "In QB-Core" vs "Not in QB-Core" sections with duplicate spawncode warnings
 
-- **Vehicle Data Saving**  
-  - Saves vehicle data to `vehiclesaves.lua` with proper formatting for Qb-core `vehicles.lua` ensuring a ready to paste format.  
-  - Admin-only access with ACE permissions or QBCore admin checks.  
-  - Success/error notifications for save operations.
-
-- **Dynamic Dropdowns**  
-  - Populates dropdowns with unique values from QB-Core’s shared vehicle data.  
-  - Searchable and filterable inputs with autocomplete on Enter key.  
-  - Smooth dropdown behavior with scrollable lists.
-
-- **Customization Options**  
-  - Light and dark theme toggle in the settings modal.  
-  - Responsive UI with animated transitions and gradient effects.  
-
-- **Safety & Optimization**  
-  - Automatic UI cleanup on close or Escape key press.  
-  - Prevents unauthorized access with permission checks.  
-  - Optimized for performance with minimal server load.
-
-- **Export All Vehicles**  
-  - Bulk export all vehicles (those not in QB-Core `vehicles.lua`) to `vehiclesaves.lua`.  
-  - Options to exclude emergency vehicles (class 18), apply auto-pricing, and set fallback shop.
+**Access Control**
+- All server actions require either the `command` ace permission or QBCore `admin` permission
 
 ---
 
-## Requirements
+## 📋 Requirements
 
-```bash
-Dependency             Version   Required
----------------------- --------- ----------
-QBCore Framework       Latest    Yes
-ox_lib                 Latest    Yes
-```
+| Dependency | Required |
+|---|---|
+| ox_lib | Yes (declared dependency) |
+| qb-core | Yes (used throughout client/server code, though not listed in `dependencies {}`) |
 
 ---
 
-## Installation
-
-### 1. Download & Extract
+## 🚀 Installation
 
 ```bash
-# Clone from GitHub
-git clone https://github.com/MnCLosSantos/mnc-vehiclemanager.git
-
-# OR download ZIP from Releases
+# Place into your resources folder
+[server-data]/resources/[custom]/mnc-vehiclemanager-v2/
 ```
-
-Place into your resources folder:
-
-```bash
-[server-data]/resources/[custom]/mnc-vehiclemanager/
-```
-
-### 2. Add to Server Config
 
 ```lua
 # server.cfg
-ensure ox_lib
-ensure mnc-vehiclemanager
+ensure mnc-vehiclemanager-v2
 ```
 
-### 3. File Setup
+No database tables are used — all output is written to Lua files on disk (`vehiclesaves.lua`, `vehiclelist.lua` inside this resource's folder). The server process needs write access to this resource's directory, and to `qb-core`'s directory if using the "Replace/Edit Vehicle" feature (since it edits `qb-core/shared/vehicles.lua` directly).
 
-The script **automatically creates** the following file:
-- `vehiclesaves.lua`: Stores saved vehicle data.
+---
 
-> No additional database setup is required — data is saved directly to `vehiclesaves.lua`.
+## ⚙️ Configuration Guide
 
-### 4. Configure Permissions
-
-Ensure admins have the necessary permissions:
+This resource has no `config.lua` — all behavior is hardcoded in `client.lua`/`server.lua`. The only user-facing setting is the command name itself, registered via:
 
 ```lua
-# ACE Permissions (recommended)
-add_ace group.admin command allow
+RegisterCommand('vehiclelua', function()
+    -- opens the vehicle inspector UI for the vehicle you're currently in
+end, false)
 ```
 
-> The script also supports QBCore admin checks via `QBCore.Functions.HasPermission(src, 'admin')`.
+---
+
+## 🎮 Controls & Usage
+
+- **`/vehiclelua`** — while seated in any vehicle, opens the vehicle data editor for that vehicle
 
 ---
 
-## Configuration
+## 🔧 Troubleshooting
 
-### Pricing Configuration
-
-pricing logic:
-
-```javascript
-const pricingConfig = {
-  basePrices: {
-    compacts: 15000,
-    sedans: 25000,
-    suvs: 35000,
-    coupes: 30000,
-    muscle: 40000,
-    sportsclassics: 50000,
-    sports: 60000,
-    super: 100000,
-    motorcycles: 20000,
-    offroad: 30000,
-    industrial: 25000,
-    utility: 20000,
-    vans: 25000,
-    cycles: 5000,
-    boats: 50000,
-    helicopters: 150000,
-    planes: 200000,
-    service: 20000,
-    emergency: 30000,
-    military: 50000,
-    commercial: 40000,
-    trains: 100000
-  },
-  brandMultipliers: {
-    Albany: 0.9,
-    Annis: 1.1,
-    Benefactor: 1.2,
-    // ... (full list is in the resource)
-    Unknown: 0.9
-  },
-  typeMultipliers: {
-    automobile: 1.0,
-    bike: 0.8,
-    boat: 1.2,
-    heli: 1.5,
-    plane: 1.7,
-    train: 2.0
-  },
-  premiumShopMultiplier: {
-    luxury: 1.3,
-    import: 1.4,
-    airshop: 1.5,
-    boatshop: 1.2,
-    moto: 1.1,
-    pdm: 1.0
-  }
-};
-```
-
-> Prices are calculated as:  
-> `base × brand × type × shop × (1 ± 5% random)`
+- **"Enter a vehicle first"** — the command only works while the player is physically inside a vehicle.
+- **Replace/Edit fails with "Vehicle not found"** — the model string must exactly match an existing `model = '...'` entry in `qb-core/shared/vehicles.lua`; the patcher does a literal text search and will fail silently if the model isn't present.
+- **"Cannot write vehiclesaves.lua" / "Write failed"** — the server process lacks file write permission on the resource (or `qb-core`) directory; check your hosting provider's file permissions.
+- **Direct edits to `qb-core/shared/vehicles.lua` are risky** — this resource rewrites that file with raw string manipulation; always keep a backup before using the Replace/Edit feature on a production vehicles file.
 
 ---
 
-## Controls
+## 📝 Credits & License
 
-| Key | Action |
-|-----|--------|
-| `/vehiclelua` | Open the vehicle editor (must be in a vehicle) |
-| `Escape` | Close the editor or any modal |
+**Author**: Stan Leigh
+**Version**: 2.3.7
+**Framework**: QBCore
 
----
-
-## UI Features
-
-### Editor Layout
-- **Left Panel**: Lists all vehicles **in** and **not in** QB-Core `vehicles.lua`.
-- **Right Panel**: Form to edit and save vehicle entries.
-- **Settings Button** (top-right): Toggle theme, enable auto-pricing.
-- **Export All Button**: Bulk export all vehicles with filtering options.
-
-### Export All Modal
-- **Fallback Shop**: Default shop if none defined.
-- **Exclude Emergency Vehicles**: Skips class 18 (police, fire, etc.).
-- **Auto-Price All**: Applies dynamic pricing to every vehicle.
-- **Progress Bar**: Real-time feedback during export.
-
----
-
-## How to Use
-
-1. **Enter any vehicle** in-game.
-2. Type `/vehiclelua` to open the editor.
-3. Modify fields as needed:
-   - Use dropdowns or type directly.
-   - Enable **Auto-Price** in settings for dynamic pricing.
-4. Click **"Save to vehiclesaves.lua"**.
-5. Optionally use **Export All** to batch-save missing vehicles.
-
-> Saved entries in `vehiclesaves.lua` can later be merged into `qb-core/shared/vehicles.lua`.
-
----
-## Preview
-
-1. **Main UI page** triggered by command.
-![alt text](<FiveM® by Cfx.re - Midnight Club Los Santo's 29_10_2025 01_40_51.png>)
-
-2. **Main UI page** triggered by command in light mode.
-![alt text](<FiveM® by Cfx.re - Midnight Club Los Santo's 29_10_2025 01_37_18.png>)
-
-3. **Settings modal** triggered by settings button.
-![alt text](<FiveM® by Cfx.re - Midnight Club Los Santo's 29_10_2025 01_40_29.png>)
-
-4. **Export all modal** triggered by export all button.
-![alt text](<FiveM® by Cfx.re - Midnight Club Los Santo's 29_10_2025 01_40_18.png>)
-
-## Download and Community
-
-[![Discord](https://img.shields.io/badge/Discord-Join%20Server-7289da?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/aTBsSZe5C6)
-
-[![GitHub](https://img.shields.io/badge/GitHub-View%20Script-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/MnCLosSantos/mnc-vehiclemanager)
-
----
-
-## License
-
-This project is licensed under the [MIT License](https://opensource.org/licenses/MIT).
-
----
-
-**Made with ❤️ for the FiveM Community**  
-*Version 2.3.7 — Fully Updated & Optimized*
+Distributed as part of the MnCLosSantos mod-dump collection — open source, please credit the original author if you edit and re-release.
