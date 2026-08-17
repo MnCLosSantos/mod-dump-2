@@ -1,167 +1,104 @@
-# 🚗 MNC Vehicle Catalog System
+# 🏎️ MnC Vehicle Catalog v2
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![FiveM](https://img.shields.io/badge/FiveM-Ready-green.svg)](https://fivem.net/)
 [![QBCore](https://img.shields.io/badge/Framework-QBCore-blue.svg)](https://github.com/qbcore-framework)
-[![Version](https://img.shields.io/badge/Version-3.0.0-brightgreen.svg)]()
+[![Version](https://img.shields.io/badge/Version-2.3.0-brightgreen.svg)]()
 
 ---
 
 ## 🌟 Overview
 
-A **modern vehicle catalog system** for QBCore-based FiveM servers.  
-This script provides a **sleek UI** for browsing vehicles, with support for **dealership-specific catalogs**, **admin access**, and **proximity-based interactions**. It integrates with **qb-target** or keypress (`E`) for opening the catalog, featuring customizable UI styles and vehicle filtering.
+MnC Vehicle Catalog v2 is a browsable, image-driven vehicle showcase for dealerships. It ships a shared vehicle database of 1000+ vehicles (`shared/vehicles.lua`) tagged by dealership ("shop"), and lets players walk up to any of 7 configured dealership zones to browse that shop's inventory in a themed NUI catalogue. Admins get an extra `/vehiclecatalog` command that opens every vehicle across all dealerships with in-place price editing and the ability to reassign a vehicle to a different dealership.
 
 ---
 
 ## ✨ Key Features
 
-- 🖥️ **Responsive UI**  
-  - Multiple UI themes (Dark Modern, Light Clean, Neon Night, Retro, Oceanic).  
-  - Searchable vehicle catalog with category filters.  
-  - Lazy-loaded vehicle images with fallback support.  
+**Dealership Zones**
+- 7 pre-configured showroom zones (PDM, PDM Deluxe, MnC Motors, Trucks and Trailers, Race and Rally, Drift and Drag, Semi Catalogue), each with its own coordinates, radius, and UI theme
+- Interaction via proximity keypress or `qb-target` (`Config.UseTarget`)
+- Each zone only displays vehicles whose `shop` field in `shared/vehicles.lua` matches that zone's name
 
-- 🚘 **Dealership Integration**  
-  - Zone-based catalogs tied to specific dealerships (e.g., PDM, Luxury).  
-  - Supports proximity UI with `qb-target` or `E` keypress.  
-  - Admin command to view all vehicles.  
+**Vehicle Catalogue**
+- 1000+ vehicle entries bundled in `shared/vehicles.lua` (loaded alongside `@qb-core/shared/vehicles.lua`), each with model, display name, brand, price, class category, and assigned dealership `shop`
+- Vehicle images resolved through a fallback chain: `docs.fivem.net` renders → two configurable GitHub-hosted image mirrors → a local `fallback.png`
+- A server-side image scanner (admin-triggered) checks each vehicle's image URLs in batches and reports progress via an in-game menu, flagging any vehicles that fall back to the local placeholder
 
-- 🔧 **Customizable Config**  
-  - Define zones with coordinates, radius, and UI styles.  
-  - Configure admin access groups and command.  
-  - Toggle between `qb-target` or keypress interaction.  
+**Admin Tools** (`/vehiclecatalog`, admin permission required)
+- Opens the full "All Vehicles" catalogue across every dealership with editable prices
+- Reassign a vehicle's dealership ("swap dealership") — this directly patches the `shop` field for that vehicle's entry inside `shared/vehicles.lua` on disk
+- Edit a vehicle's price — persists a live patch into the resource's own `shared/vehicles.lua`
 
-- 🛡️ **Optimized & Secure**  
-  - Clean client/server architecture with minimal overhead.  
-  - Automatic UI focus management and cleanup.  
-  - Error handling for missing vehicle images.  
+**5 selectable NUI color themes** (`style1`-`style5`) assignable per zone
 
 ---
 
 ## 📋 Requirements
 
-```bash
-Dependency             Version   Required
----------------------- --------- ----------
-QBCore Framework       Latest    ✅ Yes
-qb-core                Latest    ✅ Yes
-ox_lib                 Latest    ✅ Yes
-qb-target              Latest    Optional (if UseTarget = true)
-```
+| Dependency | Required |
+|---|---|
+| qb-core | Yes |
+| ox_lib | Yes |
 
 ---
 
 ## 🚀 Installation
 
-### 1️⃣ Download & Extract
-
 ```bash
-# Clone from GitHub
-git clone https://github.com/YourUsername/mnc-vehiclecatalog.git
-
-# OR download ZIP from Releases
+# Place into your resources folder
+[server-data]/resources/[custom]/mnc-vehiclecatalog-v2/
 ```
-
-Place into your resources folder:
-
-```bash
-[server-data]/resources/[custom]/mnc-vehiclecatalog/
-```
-
-### 2️⃣ Add to Server Config
 
 ```lua
 # server.cfg
-ensure mnc-vehiclecatalog
+ensure mnc-vehiclecatalog-v2
 ```
 
-### 3️⃣ Configure Zones
+No database tables are used. This resource ships its own `shared/vehicles.lua` (in addition to `@qb-core/shared/vehicles.lua`) with the full vehicle-to-dealership mapping; admin price/shop edits are written directly back to this file on disk, so the resource folder must be writable by the server process.
 
-Update `config.lua` to define dealership zones and UI styles:
+---
+
+## ⚙️ Configuration Guide
 
 ```lua
+Config.Command = 'vehiclecatalog' -- admin command to open the full catalogue
+
+Config.ImagePaths = {
+    primary  = 'https://docs.fivem.net/vehicles/{model}.webp',
+    github1  = 'https://github.com/MnCLosSantos/mnc-vehicle-image-storage/raw/main/{model}.png',
+    github2  = 'https://github.com/MnCLosSantos/mnc-vehicle-image-storage-2/raw/main/{model}.png',
+    local_fallback = './images/fallback.png',
+}
+
+Config.UseTarget = false -- true = qb-target, false = keypress [E]
+
 Config.Zones = {
-    {
-        name = 'pdm',
-        coords = vector3(-55.17, -1089.85, 26.92),
-        radius = 2.0,
-        uiStyle = 'style1',
-        title = 'Adams Apple PDM Catalogue',
-        useAnywhere = false,
-    },
-    {
-        name = 'luxury',
-        coords = vector3(-1146.43, -1733.85, 4.67),
-        radius = 1.5,
-        uiStyle = 'style2',
-        title = 'PDM Deluxe Catalogue',
-        useAnywhere = false,
-    },
+    { name = 'pdm', coords = vector3(-55.17, -1089.85, 26.92), radius = 2.0, uiStyle = 'style1', title = 'Adams Apple PDM Catalogue' },
+    -- ... 6 more zones
 }
 ```
 
 ---
 
-## ⚙️ Configuration
+## 🎮 Controls & Usage
 
-### 🎯 Config Overview
-
-The `config.lua` file allows customization of:
-
-- **Admin Command**: Set command name and access groups.
-- **Interaction**: Toggle between `qb-target` or `E` keypress.
-- **Zones**: Define dealership locations, UI styles, and titles.
-- **UI Styles**: Customize colors, blur, and transparency for each theme.
-
-Example `config.lua` snippet:
-
-```lua
-Config = {
-    Command = 'vehiclecatalog',
-    AdminGroups = {'group.admin'},
-    UseTarget = false,
-    Zones = {
-        {
-            name = 'pdm',
-            coords = vector3(-55.17, -1089.85, 26.92),
-            radius = 2.0,
-            uiStyle = 'style1',
-            title = 'Adams Apple PDM Catalogue',
-            useAnywhere = false,
-        },
-    },
-    UIStyles = {
-        style1 = {
-            primaryBg = 'rgba(32, 33, 36, 0.8)',
-            secondaryBg = 'rgba(48, 49, 52, 0.7)',
-            accent = '#8ab4f8',
-            textPrimary = '#e8eaed',
-            textSecondary = '#9aa0a6',
-            borderColor = 'rgba(95, 99, 104, 0.5)',
-            blur = '10px',
-        },
-        -- Additional styles...
-    },
-}
-```
+- **[E]** near a dealership zone (or qb-target if `Config.UseTarget = true`) — browse that dealership's vehicles
+- **`/vehiclecatalog`** (admin only) — opens the full catalogue with price editing and dealership reassignment
 
 ---
 
-## 🎮 Controls
+## 🔧 Troubleshooting
 
-| Key | Action |
-|-----|--------|
-| `E` | Open catalog (if `UseTarget = false` and in zone) |
-| `ESC` | Close catalog UI |
-
----
-
-## 📞 Support & Community
-
-[![Discord](https://img.shields.io/badge/Discord-Join%20Server-7289da?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/your-discord-link)
+- **Vehicle images all show the fallback icon** — the configured GitHub image mirrors or `docs.fivem.net` may not have an image for that model; run the admin fallback scanner to identify which vehicles need attention.
+- **Price/dealership edits don't stick after a restart** — edits are written directly into `shared/vehicles.lua` on disk; confirm the server process has write permission to the resource folder and that the file wasn't reset by a deployment pipeline.
+- **A zone shows no vehicles** — no entries in `shared/vehicles.lua` have a matching `shop` value for that zone's `name`.
 
 ---
 
-## 📜 License
+## 📝 Credits & License
 
-This project is licensed under the [MIT License](https://opensource.org/licenses/MIT).
+**Author**: Stan Leigh
+**Version**: 2.3.0
+**Framework**: QBCore
+
+Distributed as part of the MnCLosSantos mod-dump collection — open source, please credit the original author if you edit and re-release.
