@@ -1,6 +1,4 @@
-```markdown
-<DOCUMENT filename="README.md">
-# 🚗 MNC Parking System
+# 🅿️ MNC Parking
 
 [![FiveM](https://img.shields.io/badge/FiveM-Ready-green.svg)](https://fivem.net/)
 [![QBCore](https://img.shields.io/badge/Framework-QBCore-blue.svg)](https://github.com/qbcore-framework)
@@ -10,309 +8,119 @@
 
 ## 🌟 Overview
 
-A **robust persistent vehicle parking system** for QBCore-based FiveM servers. Features realistic parking mechanics with physical parking locks, vehicle covering with tarps, dynamic blips, state synchronization, and full integration with qb-garages and qb-vehiclekeys. Includes an advanced vehicle cover system that persists across restarts and player reconnects.
-
-Built with performance, realism, and compatibility in mind.
+MNC Parking lets players physically park an owned vehicle anywhere in the world (outside restricted zones) instead of only in a garage, persisting its exact position, heading, fuel, and mods to the database. Parked vehicles can be locked down with a wheel lock item, wrapped in a physical tarp/cover prop, tracked with a map blip, and recalled or moved between garages — all with server-authoritative validation and slot limits per player.
 
 ---
 
 ## ✨ Key Features
 
-### 🔒 Parking Lock System
-- **Physical parking lock item** required before parking (`parking_lock`)
-- **Dedicated parking key item** to remove locks (`parking_key`)
-- **Ownership validation** — only vehicle owners can install/remove locks
-- **Database persistence** for installed locks
+**Parking & Persistence**
+- `/park` parks the vehicle you're currently driving at its exact world position (position, heading, fuel, engine/body health, and full mod properties are saved to `mnc_parked_vehicles`)
+- Confirmation dialog warns that recalling from the depot/impound wipes mods, and explains how to preserve them (via `/parked` → Recall, or waiting for a server restart)
+- No-parking zones (`Config.NoParkZones`) block parking near configured locations (police stations, casino, mechanic shops, etc.) with a radius and label per zone
+- Per-player slot limit (`Config.MaxVehiclesOut`, default 4) with a Discord-ID-based VIP override (`Config.VipDiscordIds` / `Config.VipMaxVehiclesOut`) granting extra slots
+- A background sync timer periodically updates the vehicle's live position/condition back to the database, and a move-watcher detects if a parked vehicle has been displaced (e.g. towed) beyond a threshold
 
-### 🏞️ Persistent Parking
-- **Database-backed** parked vehicle storage (`mnc_parked_vehicles`)
-- **Full vehicle state saving**: position, heading, props, fuel, engine & body health
-- **Periodic client-to-server sync** (every 30 seconds by default)
-- **Automatic garage state management** with qb-garages integration
-- **Move detection** — driving a parked vehicle sends it to the impound/depot after restart
+**Parked Vehicle Menu**
+- `/parked` (configurable command list) opens an `ox_lib` menu of all your parked vehicles, showing condition (Excellent/Good/Fair/Poor) and fuel level
+- Per-vehicle options: set GPS waypoint, re-issue keys, or recall the vehicle back to a garage
 
-### 🛡️ Vehicle Cover / Tarp System
-- **Placeable vehicle tarps** using `vehicle_tarp` item
-- **Class-specific cover props** (different models for compacts, sedans, SUVs, sports, etc.)
-- **Persistent covers** across server restarts and player reconnects
-- **Tarp removal box** (`vehicle_tarp_box`) for emergency uncover
-- **qb-target** integration for uncovering covered vehicles
-- **Proper visibility/collision handling** while covered
+**Parking Lock**
+- `parking_lock` item physically installs a wheel lock on a nearby vehicle (with a progress bar), preventing it from being driven/tracked as a target for theft until removed
+- `parking_key` item removes the lock
 
-### 📍 Visual & Quality of Life
-- **Owner-only blips** on the map for parked vehicles
-- **Parked vehicles menu** (`/parked` or configured commands)
-  - Set waypoint to vehicle
-  - Re-issue keys
-  - Recall vehicle to garage
-- **No-Park Zones** — configurable restricted areas (PD, hospitals, PDM, Benny's, etc.)
-- **VIP Discord slot system** — extra parking slots for VIP players
+**Vehicle Cover System**
+- `vehicle_tarp` item covers a parked vehicle with a class-appropriate cover prop (`Config.Cover.CoverProps`, mapped by GTA vehicle class), timed with a progress bar and interaction distance check
+- `vehicle_tarp_box` item removes a cover, useful if a cover prop becomes stuck/desynced
+- Cover state persists per-plate in a dedicated `mnc_cover_state` table and automatically cleans up when a vehicle is recalled or untracked
 
-### 🔧 Advanced Mechanics
-- **Session-based spawn handling** for addon vehicles (client-side model streaming)
-- **Network ownership management** for reliable prop application
-- **Graceful reconnect/restart recovery** for both vehicles and covers
-- **Cover teardown on recall** with proper prop cleanup
-- **Anti-duplication and anti-exploit** safeguards
+**Admin Tools**
+- `/dropparked` (admin permission or server console) force-clears every parked vehicle on the server, tearing down covers, deleting spawned entities, and resetting all state/DB records at once
 
 ---
 
 ## 📋 Requirements
 
-| Dependency          | Version | Required |
-|---------------------|---------|----------|
-| QBCore Framework    | Latest  | ✅ Yes   |
-| qb-inventory        | Latest  | ✅ Yes   |
-| qb-target           | Latest  | ✅ Yes   |
-| ox_lib              | Latest  | ✅ Yes   |
-| oxmysql             | Latest  | ✅ Yes   |
-| qb-vehiclekeys      | Latest  | ✅ Yes   |
-| qb-garages          | Latest  | Recommended |
+| Dependency | Required |
+|---|---|
+| qb-core | Yes |
+| ox_lib | Yes |
+| oxmysql | Yes |
+| qb-garages | Implied — recalled/impounded vehicles are routed to named garages (`Config.RecallGarage`, `Config.ImpoundGarage`) that must exist in your garage system |
 
 ---
 
 ## 🚀 Installation
 
-### 1️⃣ Download & Extract
-
-Place the resource into your resources folder:
-```
+```bash
+# Place into your resources folder
 [server-data]/resources/[custom]/mnc-parking/
 ```
 
-### 2️⃣ Database Setup
-
-The script **automatically creates** all required tables on first start:
-- `mnc_parking_locks`
-- `mnc_parked_vehicles`
-- `mnc_cover_state` (for vehicle tarps)
-
-No manual SQL import needed!
-
-### 3️⃣ Add to Server Config
-
 ```lua
-ensure oxmysql
+# server.cfg
 ensure mnc-parking
 ```
 
-**Important**: Start after qb-core, qb-inventory, qb-target, and ox_lib.
+Add the four items from `install/items.txt` (`parking_lock`, `parking_key`, `vehicle_tarp`, `vehicle_tarp_box`) to your `qb-core/shared/items.lua`. Both `mnc_parking_locks` / `mnc_parked_vehicles` (parking) and `mnc_cover_state` (cover system) tables are created automatically via `CREATE TABLE IF NOT EXISTS` on resource start — no manual SQL import needed.
 
-### 4️⃣ Configure Settings
+---
 
-Edit `config.lua`:
+## ⚙️ Configuration Guide
 
 ```lua
-Config.Debug = false
-
 Config.MaxVehiclesOut = 4
-Config.VipMaxVehiclesOut = 15
-
 Config.ParkingLockItem = 'parking_lock'
-Config.ParkingKeyItem = 'parking_key'
-
-Config.SaveInterval = 30000        -- 30 seconds
-Config.InteractDistance = 2.5
-
-Config.RecallGarage = 'pillboxgarage'
+Config.ParkingKeyItem  = 'parking_key'
+Config.RecallGarage  = 'pillboxgarage'
 Config.ImpoundGarage = 'depotLot'
-
 Config.Commands = { 'parked' }
 
--- No-Park Zones (PD, hospitals, dealerships, etc.)
-Config.NoParkZones = { ... }
+Config.NoParkZones = {
+    { coords = vector3(441.0, -982.0, 30.7), radius = 100.0, label = 'Mission Row PD' },
+    -- more zones...
+}
 
--- VIP Discord IDs for extra slots
-Config.VipDiscordIds = { ... }
+Config.VipMaxVehiclesOut = 15
+Config.VipDiscordIds = {
+    -- '123456789012345678',
+}
 
--- Vehicle Cover Settings
 Config.Cover = {
     CoverItem = 'vehicle_tarp',
     CoverRemoveItem = 'vehicle_tarp_box',
     CoverDuration = 4000,
     InteractDistance = 2.5,
-    -- Class-specific props defined in config
 }
 ```
 
-### 5️⃣ Add Items to QBCore
-
-Add these items to `qb-core/shared/items.lua`:
-
-```lua
-['parking_lock'] = {
-    ['name'] = 'parking_lock',
-    ['label'] = 'Parking Lock',
-    ['weight'] = 500,
-    ['type'] = 'item',
-    ['image'] = 'parking_lock.png',
-    ['unique'] = false,
-    ['useable'] = true,
-    ['shouldClose'] = true,
-    ['description'] = 'Install on a vehicle to enable parking'
-},
-
-['parking_key'] = {
-    ['name'] = 'parking_key',
-    ['label'] = 'Parking Key',
-    ['weight'] = 100,
-    ['type'] = 'item',
-    ['image'] = 'parking_key.png',
-    ['unique'] = false,
-    ['useable'] = true,
-    ['shouldClose'] = true,
-    ['description'] = 'Remove a parking lock from a vehicle'
-},
-
-['vehicle_tarp'] = {
-    ['name'] = 'vehicle_tarp',
-    ['label'] = 'Vehicle Tarp',
-    ['weight'] = 2000,
-    ['type'] = 'item',
-    ['image'] = 'vehicle_tarp.png',
-    ['unique'] = false,
-    ['useable'] = true,
-    ['shouldClose'] = true,
-    ['description'] = 'Cover your parked vehicle'
-},
-
-['vehicle_tarp_box'] = {
-    ['name'] = 'vehicle_tarp_box',
-    ['label'] = 'Tarp Removal Box',
-    ['weight'] = 1500,
-    ['type'] = 'item',
-    ['image'] = 'vehicle_tarp_box.png',
-    ['unique'] = false,
-    ['useable'] = true,
-    ['shouldClose'] = true,
-    ['description'] = 'Emergency vehicle cover remover'
-},
-```
+`Config.NoParkZones` is a list of coordinate/radius/label entries blocking parking near sensitive areas. `Config.VipDiscordIds` grants listed Discord snowflake IDs a higher parking slot cap. `Config.Cover.CoverProps` maps each GTA vehicle class number to a specific cover prop model.
 
 ---
 
 ## 🎮 Controls & Usage
 
-### Player Commands
-| Command     | Description                          |
-|-------------|--------------------------------------|
-| `/park`     | Park the current vehicle (must be driver + lock installed) |
-| `/parked`   | Open parked vehicles menu            |
-
-### Key Features Usage
-- **Install Lock**: Use `parking_lock` item near your vehicle
-- **Park Vehicle**: Sit in driver seat → `/park` → Confirm
-- **Cover Vehicle**: Use `vehicle_tarp` on a parked vehicle
-- **Uncover**: Target the cover prop with qb-target → "Uncover Vehicle"
-- **Emergency Uncover**: Use `vehicle_tarp_box` near a covered vehicle
-- **Recall**: Use parked menu → "Recall Vehicle" (sends to garage)
-
-### No-Park Zones
-Players cannot park or cover vehicles inside configured restricted areas (police stations, hospitals, dealerships, etc.).
+- **`/park`** (also bound via `RegisterKeyMapping` so it appears as a bindable key in FiveM's keybind settings): Parks the vehicle you're currently driving at your location.
+- **`/parked`**: Opens the menu of your parked vehicles (waypoint, get keys, recall).
+- **`parking_lock` / `parking_key` items**: Install/remove a wheel lock on a nearby vehicle.
+- **`vehicle_tarp` / `vehicle_tarp_box` items**: Cover/uncover a parked vehicle.
+- **`/dropparked`**: Admin-only (or server console) — force-clears all parked vehicles server-wide.
 
 ---
 
-## 🧪 System Mechanics
+## 🔧 Troubleshooting
 
-### Parking Flow
-1. Install **Parking Lock** on vehicle
-2. Drive to desired location
-3. Use `/park` while in driver seat
-4. Vehicle is saved with full state and locked
-5. Blip appears for owner only
-
-### Vehicle Cover Flow
-1. Park the vehicle
-2. Use **Vehicle Tarp** item nearby
-3. Cover prop spawns, vehicle becomes hidden
-4. Cover persists across restarts/reconnects
-5. Use qb-target on prop to uncover or use removal box
-
-### Move Detection
-- If a parked vehicle is driven away, it is automatically removed from the parked list
-- After server restart it will appear in the configured impound garage
-
-### VIP System
-Players with Discord IDs listed in `Config.VipDiscordIds` receive extra parking slots (`VipMaxVehiclesOut`).
+- **"You cannot park here"**: Check `Config.NoParkZones` — you're within the configured radius of a restricted location.
+- **Mods reset after pulling a vehicle from the depot/impound**: This is expected — recalling via the depot resets tuning. Use the `/parked` menu's Recall option or wait for a server restart to preserve mods instead.
+- **Vehicle stuck under a cover prop that won't remove**: Use a `vehicle_tarp_box` item near the vehicle to force-remove a desynced cover.
+- **Player has more parked vehicles than expected**: Check `Config.VipDiscordIds` — listed Discord IDs get `Config.VipMaxVehiclesOut` slots instead of the default `Config.MaxVehiclesOut`.
 
 ---
 
-## 🔧 Configuration Guide
+## 📝 Credits & License
 
-Key config options:
+**Author**: Stan Leigh
+**Version**: 1.4.0
+**Framework**: QBCore
 
-- `MaxVehiclesOut` / `VipMaxVehiclesOut` — parking slot limits
-- `NoParkZones` — array of restricted areas with radius
-- `Cover.CoverProps` — vehicle class → prop model mapping
-- `SaveInterval` — how often parked vehicles sync position/health
-- `RecallGarage` / `ImpoundGarage` — garage names from qb-garages
-
----
-
-## ⚠️ Important Notes
-
-1. **Addon Vehicles**: Fully supported — spawning is handled client-side
-2. **Performance**: Optimized with periodic sync and smart entity management
-3. **Compatibility**: Works alongside qb-garages and qb-vehiclekeys
-4. **Covers**: Vehicle tarps are fully persistent and network-safe
-5. **No-Park Zones**: Prevent parking in sensitive roleplay areas
-
-**Tested stable with 128+ players.**
-
----
-
-## 📝 Credits
-
-**Author**: Stan Leigh  
-**Version**: 1.4.0  
-**Framework**: QBCore  
-
-### Contributing
-Contributions welcome! Fork → Branch → Pull Request.
-
----
-
-## 📞 Support
-
-For issues or feature requests:
-- Open an issue on GitHub
-- Check the configuration and logs
-
----
-
-## 🔄 Changelog
-
-### Version 1.4.0 (Current)
-**New Features:**
-- ✨ Complete vehicle cover / tarp system with persistence
-- ✨ Class-specific cover props
-- ✨ Tarp removal box item for emergency uncover
-- ✨ qb-target integration for uncovering
-- ✨ Full reconnect/restart recovery for covers
-- ✨ No-Park Zone support for both parking and covering
-
-**Improvements:**
-- 🔧 Robust network ownership and prop management
-- 🔧 Batch cover state loading on player join
-- 🔧 Improved move detection and impound handling
-- 🔧 Better error handling and debug logging
-
-**Bug Fixes:**
-- 🐛 Fixed cover prop deletion and vehicle restore
-- 🐛 Resolved stale netId issues on reconnect
-- 🐛 Fixed ownership validation across all actions
-- 🐛 Corrected garage state management with qb-garages
-
-### Version 1.3.0
-- Added persistent parking with full vehicle state saving
-- Implemented periodic sync and move detection
-- Added owner blips and parked menu
-- VIP Discord slot system
-
-### Earlier Versions
-- Initial parking lock system
-- Basic database persistence
-
----
-
-**Enjoy realistic vehicle parking and protection on your FiveM server! 🚗**
+Distributed as part of the MnCLosSantos mod-dump collection — open source, please credit the original author if you edit and re-release.
