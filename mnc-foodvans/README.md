@@ -1,4 +1,4 @@
-# 🍔 MNC Food Vans
+# 🌭 MNC Food Vans
 
 [![FiveM](https://img.shields.io/badge/FiveM-Ready-green.svg)](https://fivem.net/)
 [![QBCore](https://img.shields.io/badge/Framework-QBCore-blue.svg)](https://github.com/qbcore-framework)
@@ -8,240 +8,105 @@
 
 ## 🌟 Overview
 
-A **realistic food van / street food business system** for QBCore-based FiveM servers. Players can purchase, own, staff, and operate mobile food vans across Los Santos and Blaine County. Features include purchasable locations, crafting recipes, customer NPCs, ingredient ordering, payment requests, and a van safe system.
-
-Built with performance, realism, and roleplay in mind.
+MNC Food Vans is a full player-ownable food business system built around hotdog stands, burger stands, food vans, and a coffee cart placed at 16 preset locations across the map. Players can purchase a stall, craft menu items from ingredient recipes, order more stock, sell to wandering NPC customers, manage a staff/authorised list, run a shared safe, and invoice other players — all backed by a MySQL-persisted ownership system.
 
 ---
 
 ## ✨ Key Features
 
-### 🛒 Purchaseable Locations
-- **20+ predefined locations** (Hotdog stands, Burger stands, Food Vans, Coffee vendors)
-- One-time purchase with configurable prices
-- Persistent ownership stored in database
-- Owner can sell location back at any time
+**Ownership & Locations**
+- 16 preconfigured stall locations (5 hotdog stands, 5 burger stands, 5 food vans, 1 coffee cart), each with its own prop model, coordinates, and purchase price
+- Purchasing a stall spawns its prop, creates a `qb-target` interaction zone and map blip, and records ownership (citizenid) in the database
+- Owners can add/remove other players as **authorised staff** via citizen ID, and can sell the location back
 
-### 👥 Staff Management
-- Owner can add/remove staff members by Citizen ID
-- Staff can open/close the van, craft, order ingredients, and request payments
-- Authorised list saved in database
+**Crafting & Recipes**
+- Each stall type (`prop_hotdogstand_01`, `prop_burgerstand_01`, `prop_food_van_02`, `p_ld_coffee_vend_s`) has its own recipe list — 20+ menu items total, each requiring specific raw ingredients (buns, patties, cheese, coffee beans, syrups, etc.)
+- Crafting runs a timed progress bar (`Config.CraftDuration`, 6s) and consumes ingredients from the van's linked stash
+- Raw ingredients can be restocked through an in-game order menu at set prices (`Config.OrderableIngredients`)
 
-### 🍔 Crafting System
-- Multiple recipes per van type (Hotdogs, Burgers, Sides, Drinks, Coffee, etc.)
-- Ingredient checks before crafting
-- ox_lib context menus with confirmation dialogs
-- Automatic item removal and addition
+**NPC Customer Sales**
+- While a stall is open, nearby NPC pedestrians periodically spawn, walk up, place an order from the stall's stock, and pay — automatically deducting sold items and crediting the owner (minus a cut into the shared safe)
+- Stalls auto-close if the owner/staff move too far away (`Config.StallCloseRadius`, checked every `Config.StallCloseCheckInterval`)
 
-### 👤 NPC Customers
-- Realistic pedestrian customers automatically spawn near open vans
-- Customers walk to the van and request random menu items
-- Owner/staff can confirm sale, deny, or make them wait
-- 10% of sale goes directly to owner’s bank, 90% to van safe
-- Configurable spawn radius and max customers per van
+**Money & Staff Management**
+- **Safe balance** system: a portion of each sale is banked into the stall's safe, withdrawable by the owner
+- **Invoice system**: staff can request payment from other players at the stand, up to `Config.MaxPayment`, which the target must confirm/deny
+- Management menu lists authorised staff and lets the owner add/remove them by citizen ID
 
-### 💰 Economy & Payments
-- **Request Payment** feature (send invoices to any player ID)
-- Self-charge option for quick sales
-- **Van Safe** system – 90% of NPC sales stored safely
-- Owner-only safe withdrawal to bank
-- Ingredient ordering with delivery courier
-
-### 📦 Ingredient Delivery
-- Order ingredients in batches from a clean ox_lib menu
-- Delivery ped spawns and performs handoff animation
-- Items automatically added to player inventory after delivery
-
-### 🔄 Auto Close System
-- Vans automatically close if owner and all staff are too far away
-- Prevents leaving vans open when offline or away
-
-### 🎯 Target & UI
-- Full qb-target integration with smart canInteract checks
-- ox_lib alerts, inputs, and context menus throughout
-- 3D text above vans showing price / open / closed status
-- Dynamic blips (always visible + open indicator)
+**Admin Tools**
+- Admin-only reset (`Config.AdminGroups`) clears a stall's ownership back to unpurchased
 
 ---
 
 ## 📋 Requirements
 
-| Dependency       | Version | Required |
-|------------------|---------|----------|
-| QBCore Framework | Latest  | ✅ Yes   |
-| qb-inventory     | Latest  | ✅ Yes   |
-| qb-target        | Latest  | ✅ Yes   |
-| ox_lib           | Latest  | ✅ Yes   |
-| oxmysql          | Latest  | ✅ Yes   |
+| Dependency | Required |
+|---|---|
+| qb-core | Yes |
+| qb-target | Yes |
+| ox_lib | Yes |
+| oxmysql | Yes |
 
 ---
 
 ## 🚀 Installation
 
-### 1️⃣ Download & Extract
-
-Place the resource into your resources folder:
-```
+```bash
+# Place into your resources folder
 [server-data]/resources/[custom]/mnc-foodvans/
 ```
 
-### 2️⃣ Database Setup
-
-The script **automatically creates** the required table on first start:
-- `mnc_foodvans` – Stores ownership, open status, staff, and safe balance
-
-No manual SQL needed.
-
-### 3️⃣ Add to Server Config
-
 ```lua
-ensure oxmysql
+# server.cfg
 ensure mnc-foodvans
 ```
 
-### 4️⃣ Add Items
-
-Add all items from `items.txt` (or the provided list) to your `qb-core/shared/items.lua`.
-
-Example:
-```lua
-['van_hotdog_classic'] = {
-    ['name'] = 'van_hotdog_classic',
-    ['label'] = 'Classic Hotdog',
-    ['weight'] = 200,
-    ['type'] = 'item',
-    ['image'] = 'van_hotdog_classic.png',
-    ['unique'] = false,
-    ['useable'] = true,
-    ['shouldClose'] = true,
-    ['description'] = 'A classic hotdog.'
-},
-```
-
-**Note:** You will also need the corresponding `.png` images in your inventory image folder.
-
-### 5️⃣ Configure Settings
-
-Edit `config.lua` to customize:
-
-- Van locations & prices
-- Recipes per prop type
-- Ingredient prices & batch sizes
-- NPC customer behavior
-- Payment limits
-- Debug mode
+Add the ~40 ingredient/menu items listed in `install/items.txt` to your item system. Per `install/readme.txt`, these consumable food/drink items should be added via `qb-smallresources`, `jim-consumables`, or a similar eat/drink handler (not plain `qb-core` items) so they have usable eat/drink effects. The `mnc_foodvans` table (stall ownership, open state, staff list, safe balance) is created automatically on resource start via `CREATE TABLE IF NOT EXISTS`, with an automatic `ALTER TABLE` for `safe_balance` on upgrade from older versions.
 
 ---
 
-## ⚙️ Configuration Highlights
+## ⚙️ Configuration Guide
 
-### Van Locations
-Multiple categories (Hotdog, Burger, Food Van, Coffee) with custom props and zOffsets.
-
-### Recipes
-Fully configurable per prop model with multiple ingredients and output amounts.
-
-### Customer Sale Prices
-Set how much each crafted item sells for to NPC customers.
-
-### Key Settings
 ```lua
-Config.Debug = false
 Config.PaymentAccount = 'cash'
+Config.BuyRange = 3.0
+Config.CraftDuration = 6000
+Config.AdminGroups = { 'admin', 'god', 'superadmin' }
+Config.StashSlots = 50
+Config.StashMaxWeight = 100000
 Config.MaxPayment = 500
-Config.CustomerSpawnRadius = 75.0
-Config.StallCloseRadius = 100.0
+
+Config.VanLocations = {
+    { id = 1, label = 'Rockford Hot Dogs', prop = 'prop_hotdogstand_01',
+      coords = vector4(107.96, -198.66, 54.8, 180.02), price = 25000 },
+    -- ... 15 more locations
+}
 ```
+
+`Config.VanLocations` defines each purchasable stall's position, prop, and price. `Config.PropRecipes` (keyed by prop model) defines every craftable menu item and its ingredient costs, while `Config.CustomerSalePrices` sets what NPCs pay for each finished item.
 
 ---
 
 ## 🎮 Controls & Usage
 
-### Owner / Staff Actions
-- **Purchase** a location when it shows "FOR SALE"
-- **Open / Close** the van
-- **Craft Food** using available ingredients
-- **Order Ingredients** (delivery arrives in ~45 seconds)
-- **Request Payment** from nearby players
-- **Manage Staff** & withdraw from van safe (owner only)
-- **Sell Location** to recover safe funds
-
-### NPC Customer Flow
-1. Open your van
-2. Customers automatically approach
-3. Accept or deny their order
-4. Money splits: 10% to bank, 90% to van safe
-
-### Payment System
-- Use "Request Payment" → Enter player ID + amount + reason
-- Customer receives clean confirmation dialog
-- Payment splits between worker and van safe
+- **qb-target interaction**: All stall actions — purchase, open/close for business, craft, access stash, order ingredients, manage staff, request payment — are accessed by targeting the stall prop.
+- No chat commands or keybinds are used; the entire flow is target/menu-driven.
 
 ---
 
 ## 🔧 Troubleshooting
 
-**Van not appearing?**
-- Ensure qb-target is running
-- Check server console for database errors
-- Restart resource after adding to server.cfg
-
-**Items not showing in craft menu?**
-- Verify items are added to qb-core/shared/items.lua
-- Check that recipe ingredients exist in Config.OrderableIngredients
-
-**Delivery not spawning?**
-- Make sure the delivery ped model is valid
-- Check Config.DeliveryPedModel
-
-**Safe balance not updating?**
-- Confirm oxmysql is working correctly
-- Check for errors when NPC sales occur
+- **Food items don't restore hunger/thirst**: The items in `install/items.txt` need eat/drink effects added through `qb-smallresources`, `jim-consumables`, or equivalent — this script only handles crafting/selling, not consumption effects.
+- **Stall closes on its own**: Stalls auto-close if no owner/authorised staff remain within `Config.StallCloseRadius` of the location; this is checked every `Config.StallCloseCheckInterval` (15s).
+- **NPC customers not spawning**: Confirm the stall is marked "open" and that players are within `Config.CustomerSpawnRadius` of the stall — NPCs only spawn near an active, open location.
+- **Old server upgrading and missing safe_balance errors**: The script automatically runs an `ALTER TABLE ... ADD COLUMN IF NOT EXISTS safe_balance` on startup, so simply restarting the resource against an older table should self-heal.
 
 ---
 
-## 📝 Credits
+## 📝 Credits & License
 
-**Author**: Stan Leigh  
-**Version**: 1.3.6  
-**Framework**: QBCore  
+**Author**: Stan Leigh
+**Version**: 1.3.6
+**Framework**: QBCore
 
-### Contributing
-Contributions are welcome! Fork the repository, create a feature branch, and submit a pull request.
-
----
-
-## 📞 Support
-
-For support, bug reports, or feature requests:
-- Open an issue on GitHub
-- Check the included readme.txt and items.txt files
-
----
-
-## 🔄 Changelog
-
-### Version 1.3.6 (Current)
-**New Features:**
-- ✨ Full NPC customer system with walking, ordering, and interaction
-- ✨ Payment request / invoice system with self-charge support
-- ✨ Van safe system (90% of NPC & invoice sales stored)
-- ✨ Owner-only safe withdrawal
-- ✨ Auto-close system when staff are out of range
-- ✨ Ingredient delivery with ped handoff animation
-- ✨ Dynamic blips (always + open status)
-
-**Improvements:**
-- 🔧 ox_lib menus and alerts throughout
-- 🔧 Better ownership and authorisation checks
-- 🔧 Improved prop spawning with raycasting and zOffset support
-- 🔧 Staff management menu with safe balance display
-
-**Bug Fixes:**
-- 🐛 Fixed multiple prop spawning issues
-- 🐛 Resolved inventory and money handling edge cases
-- 🐛 Improved target zone refreshing
-
----
-
-**Enjoy running your own street food empire on your FiveM server! 🍔🌭☕**
+Distributed as part of the MnCLosSantos mod-dump collection — open source, please credit the original author if you edit and re-release.
