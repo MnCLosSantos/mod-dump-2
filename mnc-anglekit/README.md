@@ -1,4 +1,4 @@
-# 🚗 MNC Angle Kit System
+# 🛞 MNC Angle Kit
 
 [![FiveM](https://img.shields.io/badge/FiveM-Ready-green.svg)](https://fivem.net/)
 [![QBCore](https://img.shields.io/badge/Framework-QBCore-blue.svg)](https://github.com/qbcore-framework)
@@ -8,313 +8,107 @@
 
 ## 🌟 Overview
 
-A **comprehensive vehicle angle kit system** for QBCore-based FiveM servers featuring tiered steering lock modifications, persistent database storage, job-restricted installation, per-wheel progress animations, custom angle adjustments for pro kits, and admin tools. Built with performance and realism in mind for enhanced drifting mechanics.
+MNC Angle Kit lets mechanics install steering-angle ("drift lock") upgrades onto vehicles by directly modifying the vehicle's `fSteeringLock` handling value. Three tiered kits set progressively larger fixed steering lock angles, and the Pro kit unlocks a `/angle` command to fine-tune a custom angle. Installation and removal are done wheel-by-wheel with an interactive walk-to-each-wheel-and-press-E flow plus an `ox_lib` progress bar and mechanic animation.
 
 ---
 
 ## ✨ Key Features
 
-### 🔧 Kit Installation & Animations
-- **Immersive per-wheel installation** with progress bars and mechanic animations
-- **Tiered kits** (Basic, Street, Pro) with increasing steering angles
-- **Prevent downgrades** by checking existing kit tiers
-- **Job restrictions** to limit installation to mechanics or specific roles
-- **Progress bar integration** using ox_lib for smooth UI
-- **Automatic handling modifications** applied in real-time
-- **Vehicle entry/exit detection** to apply/restore angles dynamically
+**Tiered angle kits**
+- Basic (45°), Street (55°), and Pro (65° default, adjustable) kits are installed as usable inventory items, each defining a fixed steering lock angle applied via `SetVehicleHandlingFloat(vehicle, 'CHandlingData', 'fSteeringLock', ...)`.
+- The original steering lock value is cached per-vehicle-entity so it can be restored if the kit is later removed.
+- Kits enforce a tier hierarchy (`Config.KitTier`) — installing a lower-or-equal tier over an existing kit is blocked.
+- Angle is applied automatically whenever the driver enters a vehicle that has a kit on record (fetched via server callback and cached client-side by plate).
 
-### 💾 Persistent Data System
-- **Database-backed storage** for angle kits across server restarts
-- **Automatic table creation** on startup (no manual SQL needed)
-- **In-memory caching** for fast access with database sync
-- **Plate-based tracking** to associate kits with specific vehicles
-- **Admin-applied kits** logged with applicator name
+**Wheel-by-wheel install/remove flow**
+- Both installation and removal require the mechanic to walk to each of the 4 wheels in turn (front-left, front-right, rear-left, rear-right), see an orange (install) or red (removal) ground marker with an "E" prompt, and complete a timed `ox_lib` progress bar with a mechanic animation at each wheel before moving to the next.
+- An `angle_kit_remover` item strips any installed kit and returns the original kit item to the mechanic's inventory.
 
-### 🛠️ Custom Adjustment Tools
-- **/angle Command**: Set custom steering lock (45°–85°) for Pro kits
-- **Admin Commands**: `/anglebasic`, `/anglestreet`, `/anglepro` to grant kits directly
-- **Permission checks** using QBCore's admin system
-- **Target player support** for admin commands (optional ID parameter)
+**Custom angle command**
+- `/angle <degrees>` — only usable by drivers with a Pro Angle Kit installed (`canSetAngle = true`); sets a custom steering lock between `Config.MinAngle` and `Config.MaxAngle`, synced live to all clients and persisted to the database.
 
-### 🚫 Restrictions & Balances
-- **Job & Grade Requirements**: Configurable per job (e.g., mechanics only)
-- **Distance Checks**: Must be near vehicle to install
-- **Item Consumption**: Kits are usable items that remove on success
-- **Debug Mode**: Optional logging for development
+**Persistence & sync**
+- Angle kit data is stored in an auto-created `vehicle_angle_kits` MySQL table keyed by plate, and pushed to all clients via `mnc-anglekit:syncAngleData` on install/remove/angle-change so the effect applies immediately for anyone driving that vehicle.
+
+**Admin commands**
+- `/anglebasic`, `/anglestreet`, `/anglepro [id]` — admin-only, force-installs a kit on a target player's current vehicle (bypasses item and tier checks).
 
 ---
 
 ## 📋 Requirements
 
-| Dependency | Version | Required |
-|------------|---------|----------|
-| QBCore Framework | Latest | ✅ Yes |
-| ox_lib | Latest | ✅ Yes |
-| oxmysql | Latest | ✅ Yes |
+| Dependency | Required |
+|---|---|
+| qb-core | Yes |
+| ox_lib | Yes |
+| oxmysql | Yes |
 
 ---
 
 ## 🚀 Installation
 
-### 1️⃣ Download & Extract
-
 ```bash
-# Clone from GitHub
-git clone https://github.com/YourUsername/mnc-anglekit.git
-
-# OR download ZIP from Releases
-```
-
-Place into your resources folder:
-```
+# Place into your resources folder
 [server-data]/resources/[custom]/mnc-anglekit/
 ```
 
-### 2️⃣ Database Setup
-
-The script **automatically creates** the required table on first start:
-
-- `vehicle_angle_kits` - Stores installed kits per vehicle plate
-
-No manual SQL import needed!
-
-### 3️⃣ Add to Server Config
-
 ```lua
 # server.cfg
-ensure oxmysql
 ensure mnc-anglekit
 ```
 
-### 4️⃣ Configure Settings
-
-Edit `config.lua` to customize:
-
-```lua
--- System toggles
-Config.Debug = false
-Config.RequireJob = true
-
--- Job restrictions
-Config.AllowedJobs = {
-    mechanic = 0,   -- any grade
-    mechanic2 = 0,
-    mechanic3 = 0,
-    beekers = 0,
-    autoexotics = 0,
-    bennys    = 2,
-    tuner     = 1,
-}
-
--- Kit configurations
-Config.Kits = {
-    basic_angle_kit = {
-        item         = 'basic_angle_kit',
-        label        = 'Basic Angle Kit',
-        angle        = 45,       -- degrees of steering lock granted
-        installTime  = 4000,     -- progress bar duration (ms)
-        canSetAngle  = false,    -- no /angle command for basic
-    },
-    -- ... (street and pro kits)
-}
-
-Config.MaxAngle       = 85      -- hard ceiling on /angle input
-Config.MinAngle       = 45      -- floor for /angle input
-Config.ApplyDistance  = 2.5     -- max distance to the vehicle for item use
-
--- Kit hierarchy
-Config.KitTier = {
-    basic_angle_kit  = 1,
-    street_angle_kit = 2,
-    pro_angle_kit    = 3,
-}
-```
-
-### 5️⃣ Add Items to QBCore
-
-Add all items from the config to `qb-core/shared/items.lua`. Examples:
-
-```lua
--- Kits
-['basic_angle_kit'] = {
-    ['name'] = 'basic_angle_kit',
-    ['label'] = 'Basic Angle Kit',
-    ['weight'] = 500,
-    ['type'] = 'item',
-    ['image'] = 'basic_angle_kit.png',
-    ['unique'] = false,
-    ['useable'] = true,
-    ['shouldClose'] = true,
-    ['description'] = 'Basic steering angle upgrade'
-},
-
-['street_angle_kit'] = {
-    ['name'] = 'street_angle_kit',
-    ['label'] = 'Street Angle Kit',
-    ['weight'] = 500,
-    ['type'] = 'item',
-    ['image'] = 'street_angle_kit.png',
-    ['unique'] = false,
-    ['useable'] = true,
-    ['shouldClose'] = true,
-    ['description'] = 'Street-level steering angle upgrade'
-},
-
-['pro_angle_kit'] = {
-    ['name'] = 'pro_angle_kit',
-    ['label'] = 'Pro Angle Kit',
-    ['weight'] = 500,
-    ['type'] = 'item',
-    ['image'] = 'pro_angle_kit.png',
-    ['unique'] = false,
-    ['useable'] = true,
-    ['shouldClose'] = true,
-    ['description'] = 'Professional steering angle upgrade'
-},
-```
+Add the item definitions in `install/items.txt` (`basic_angle_kit`, `street_angle_kit`, `pro_angle_kit`, `angle_kit_remover`) to your `qb-core/shared/items.lua`. The resource automatically creates its `vehicle_angle_kits` MySQL table on first start.
 
 ---
 
 ## ⚙️ Configuration Guide
 
-### 🎯 Kit Item Configuration
-
 ```lua
-['basic_angle_kit'] = {
-    item         = 'basic_angle_kit',
-    label        = 'Basic Angle Kit',
-    angle        = 45,       -- degrees of steering lock granted
-    installTime  = 4000,     -- progress bar duration (ms)
-    canSetAngle  = false,    -- no /angle command for basic
-},
+Config.RequireJob = true
+Config.AllowedJobs = {
+    mechanic = 0, mechanic2 = 0, mechanic3 = 0,
+    beekers = 0, autoexotics = 0,
+    bennys = 2, tuner = 1,
+}
+
+Config.Kits = {
+    pro_angle_kit = {
+        item = 'pro_angle_kit', label = 'Pro Angle Kit',
+        angle = 65, installTime = 6000, canSetAngle = true,
+    },
+}
+
+Config.MaxAngle = 85  -- hard ceiling on /angle input
+Config.MinAngle = 45  -- floor for /angle input
+Config.ApplyDistance = 2.5 -- max distance to the vehicle for item use
 ```
 
----
-
-## 🎬 Available Kits
-
-| Kit | Angle | Install Time | Custom Angle | Tier |
-|-----|-------|--------------|--------------|------|
-| Basic | 45° | 4s | No | 1 |
-| Street | 55° | 5s | No | 2 |
-| Pro | 65° (default) | 6s | Yes (45°–85°) | 3 |
+`AllowedJobs` maps job names to the minimum grade required to install/remove kits. Each `Kits` entry sets the fixed steering lock angle, per-wheel total install time, and whether the kit unlocks the `/angle` command. `MinAngle`/`MaxAngle` bound what `/angle` accepts.
 
 ---
 
 ## 🎮 Controls & Usage
 
-### Player Controls
-| Key | Action |
-|-----|--------|
-| `E` | Install kit at each wheel (prompt appears when near) |
-
-### Commands
-- **/angle [degrees]**: Set custom angle for Pro kit (must be driving)
-- **/anglebasic [id]**: Admin - Grant Basic kit to player (optional ID)
-- **/anglestreet [id]**: Admin - Grant Street kit
-- **/anglepro [id]**: Admin - Grant Pro kit
-
-### Installation Process
-1. Use kit item near vehicle
-2. Walk to each wheel and press E
-3. Complete progress bar per wheel
-4. Kit applies on success (item consumed)
-
----
-
-## 🧪 System Mechanics
-
-### Kit Installation
-1. **Job Check**: Must have allowed job/grade
-2. **Vehicle Detection**: Within 2.5m, not in vehicle
-3. **Tier Validation**: Cannot install lower/same tier
-4. **Per-Wheel Loop**: Player moves to each wheel manually
-5. **Database Sync**: Immediate save and client broadcast
-
-### Persistence System
-1. **Loading**: All kits loaded from DB on startup
-2. **Caching**: In-memory for quick checks
-3. **Sync**: Real-time updates to all clients on changes
-4. **Handling**: Original values cached and restored on exit
-
-### Admin Tools
-1. **Permission**: Requires QBCore admin access
-2. **Target**: Applies to current vehicle of target player
-3. **Bypass**: Ignores tier/job/item requirements
-4. **Logging**: Console print for admin actions
+- Use a `basic_angle_kit` / `street_angle_kit` / `pro_angle_kit` item near a vehicle, then walk to each wheel and press **E** when prompted to complete installation.
+- Use `angle_kit_remover` near a vehicle with a kit installed to remove it wheel-by-wheel and get the kit item back.
+- `/angle <degrees>` — Pro Angle Kit vehicles only; sets a custom steering lock between `Config.MinAngle` and `Config.MaxAngle`.
+- `/anglebasic`, `/anglestreet`, `/anglepro [id]` — admin-only kit grants.
 
 ---
 
 ## 🔧 Troubleshooting
 
-### Common Issues
-
-**Kits not saving:**
-- Verify oxmysql is properly configured
-- Check database connection in server console
-- Confirm `vehicle_angle_kits` table exists
-
-**Animations not playing:**
-- Ensure ox_lib is started before mnc-anglekit
-- Check animation dict names in client.lua
-
-**Commands not working:**
-- Confirm QBCore permissions for admin
-- Check if player is in vehicle for /angle
-- Look for server console errors
-
-**Handling not applying:**
-- Verify vehicle is driveable
-- Check client console for debug logs
-- Ensure no conflicting handling mods
+- **"You must be a mechanic to install this kit"** — the player's job/grade isn't listed in `Config.AllowedJobs`.
+- **Wheel marker/prompt never appears** — the player must be within the 1.2m prompt radius of the exact wheel bone; some add-on vehicles may not expose standard `wheel_lf`/`wheel_rf`/`wheel_lr`/`wheel_rr` bones.
+- **"/angle" says kit doesn't support it** — only the Pro Angle Kit has `canSetAngle = true`; Basic and Street kits are fixed-angle only.
+- **Steering doesn't change after installing** — angle is only (re)applied when entering the vehicle as driver; exit and re-enter, or check that `Config.ApplyDistance` allowed the item to target the correct vehicle.
 
 ---
 
 ## 📝 Credits & License
 
-**Author**: Stan Leigh  
-**Version**: 1.0.0  
-**Framework**: QBCore  
+**Author**: Stan Leigh
+**Version**: 1.0.0
+**Framework**: QBCore
 
-### Contributing
-Contributions are welcome! Please:
-1. Fork the repository
-2. Create a feature branch
-3. Submit a pull request with detailed description
-
----
-
-## 📞 Support & Community
-
-For support, bug reports, or feature requests:
-- Open an issue on GitHub
-- Join our Discord community
-- Check existing documentation
-
----
-
-## 🔄 Changelog
-
-### Version 1.0.0 (Initial Release)
-**New Features:**
-- ✨ Core angle kit system with tiered installations
-- ✨ Persistent database storage for vehicle kits
-- ✨ Per-wheel installation animations with progress bars
-- ✨ /angle command for custom Pro kit adjustments
-- ✨ Job restrictions and admin commands
-- ✨ Real-time handling modifications
-- ✨ Automatic DB table creation and data loading
-
-**Improvements:**
-- 🔧 Optimized client-side vehicle detection and caching
-- 🔧 Enhanced server-client sync for angle changes
-- 🔧 Added debug mode for logging
-
-**Bug Fixes:**
-- 🐛 Fixed handling not restoring on vehicle exit
-- 🐛 Resolved database race conditions on load
-- 🐛 Corrected plate trimming for consistency
-
----
-
-**Enjoy enhanced vehicle handling on your FiveM server! 🚗**
+Distributed as part of the MnCLosSantos mod-dump collection — open source, please credit the original author if you edit and re-release.
