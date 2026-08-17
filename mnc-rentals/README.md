@@ -1,6 +1,5 @@
-# 🚗 MNC Vehicle Rentals
+# 🚗 MnC Vehicle Rentals
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![FiveM](https://img.shields.io/badge/FiveM-Ready-green.svg)](https://fivem.net/)
 [![QBCore](https://img.shields.io/badge/Framework-QBCore-blue.svg)](https://github.com/qbcore-framework)
 [![Version](https://img.shields.io/badge/Version-1.0.0-brightgreen.svg)]()
@@ -9,315 +8,107 @@
 
 ## 🌟 Overview
 
-A **comprehensive vehicle rental system** for QBCore-based FiveM servers featuring immersive UI designs, temporary vehicle insurance/registration/inspection, multi-location support, rental limits, refund mechanics, and persistent database tracking. Built with performance and realism in mind.
+MnC Vehicle Rentals adds a network of rental car/boat/jet-ski counters across the map, each staffed by an animated NPC clerk. Players walk up, browse a categorized NUI catalogue of vehicles priced by the hour, pay cash, and get warped into a freshly spawned rental with keys, fuel, and (optionally) temporary insurance/registration/inspection. Returning the vehicle to any rental location refunds 10% of the rental cost.
 
 ---
 
 ## ✨ Key Features
 
-### 🚙 Rental System
-- **Customizable UI styles** with 5 themes (dark/light variants)
-- **Categorized vehicle selection** with brands, prices, and categories
-- **Hour-based rentals** (1-3 hours) with dynamic pricing
-- **Refund system** (10% on early return)
-- **Active rental limit** (max 3 per player)
-- **Cross-location returns** (return to any rental spot)
-- **Vehicle spawning** with fuel, keys, and warp options
-- **Required item check** (e.g., driver's license)
+**Rental Zones & NPCs**
+- 12 pre-configured rental locations (LS Airport, Innocence, Elgin, Pillbox, Eclipse, Wigwang, Route 1, Paleto, Sandy Shores, Leigon, Arena GoKarting, Vespucci Beach) each with its own NPC clerk, vehicle spawn point, and category-tagged vehicle list
+- NPC clerks are server-spawned, given idle animations, frozen/invincible, and automatically respawned if they go missing (checked every 60s)
+- Proximity-based interaction: `[E]` opens the rental UI near a clerk, `[E]` returns a vehicle near the zone's spawn point
 
-### 📝 Temporary Documentation
-- **Automatic insurance grant** with expiration
-- **Temporary registration & inspection** for rented vehicles
-- **Database persistence** for insured/registered/inspected vehicles
-- **Expiration handling** with auto-cleanup
-- **Disconnect cleanup** to remove active rentals
+**Rental Flow**
+- NUI catalogue groups vehicles by category (Compacts, Sedans, Boats, JetSki, etc.) with per-zone pricing and a selectable hourly duration
+- Optional item requirement (`driver_license` by default) before renting can be toggled via config
+- Server-side cash check, rental limit of 3 concurrent rentals per player, and automatic key assignment (`vehiclekeys` / `qb-vehiclekeys`) plus fuel refill (LegacyFuel/cdn-fuel/ox_fuel/standalone)
+- Rentals auto-expire after the paid duration; a background thread cleans up expired rentals and notifies the player
+- Returning a rental at any location refunds 10% of what was paid directly to the player's bank
 
-### 🧑‍💼 Rental Locations & Peds
-- **Multiple zones** with unique names, logos, and vehicle lists
-- **Ped spawners** with animations and periodic respawn checks
-- **Blip creation** for easy location finding
-- **3D text prompts** for interaction (open menu or return vehicle)
-- **Proximity-based detection** for efficient performance
+**Temporary Insurance/Registration**
+- When `GrantTemporaryInsurance` is enabled, renting a vehicle inserts temporary rows into `insured_vehicles`, `registered_vehicles`, and `inspected_vehicles` (requires the companion **mnc-insurance** resource), which are removed automatically on return, expiration, or player disconnect
 
-### 🔒 Security & Limits
-- **Rental count tracking** to prevent abuse
-- **Plate generation** with "RENT" prefix
-- **Vehicle cleanup** on return/expiration
-- **Debug mode** for ped spawning logs
-
-### 🛠️ Integration Support
-- **Fuel systems**: LegacyFuel, cdn-fuel, ox, standalone
-- **Key systems**: QB, standalone
-- **Insurance integration** with mnc-insurance (optional)
-- **Configurable blips** with sprites, colors, and scales
+**5 selectable NUI color themes** (`style1`-`style5`) assignable per rental zone
 
 ---
 
 ## 📋 Requirements
 
-| Dependency | Version | Required |
-|------------|---------|----------|
-| QBCore Framework | Latest | ✅ Yes |
-| ox_lib | Latest | ✅ Yes |
-| qb-core/shared/vehicles.lua | Latest | ✅ Yes |
-| oxmysql | Latest | ✅ Yes (for database) |
-| mnc-insurance | Any | ❌ Optional (for temporary insurance) |
+| Dependency | Required |
+|---|---|
+| qb-core | Yes |
+| ox_lib | Yes |
+| oxmysql | Yes (for temporary insurance/registration inserts) |
+| mnc-insurance | Only if `Config.GrantTemporaryInsurance = true` |
+| LegacyFuel / cdn-fuel / ox_fuel | Depending on `Config.Fuel` setting |
 
 ---
 
 ## 🚀 Installation
 
-### 1️⃣ Download & Extract
-
 ```bash
-# Clone from GitHub
-git clone https://github.com/YourUsername/mnc-rentals.git
-
-# OR download ZIP from Releases
-```
-
-Place into your resources folder:
-```
+# Place into your resources folder
 [server-data]/resources/[custom]/mnc-rentals/
 ```
 
-### 2️⃣ Database Setup
-
-The script uses existing tables from mnc-insurance (if enabled):
-- `insured_vehicles`
-- `registered_vehicles`
-- `inspected_vehicles`
-
-No manual SQL import needed if mnc-insurance is installed. Otherwise, create these tables manually if using GrantTemporaryInsurance.
-
-### 3️⃣ Add to Server Config
-
 ```lua
 # server.cfg
-ensure oxmysql
 ensure mnc-rentals
 ```
 
-### 4️⃣ Configure Settings
-
-Edit `config.lua` to customize:
-
-```lua
--- System toggles
-Config.GrantTemporaryInsurance = true  -- Requires mnc-insurance
-Config.RequireItem = true
-Config.RequiredItem = 'driver_license'
-
--- Vehicle systems
-Config.Fuel = 'legacy'  -- 'legacy', 'cdn', 'ox', 'standalone'
-Config.Keys = 'qb'      -- 'qb', 'standalone'
-Config.Warp = true      -- Warp player into vehicle on spawn
-
--- Blip settings
-Config.Blip = {
-    sprite = 811, -- Rental car icon
-    color = 3,    -- blue
-    scale = 0.8,
-    display = 4,
-    name = 'Vehicle Rental'
-}
-
--- UI Styles (5 options)
-Config.UIStyles = {
-    style1 = { primaryBg = 'rgba(32, 33, 36, 0.8)', ... },
-    -- ...
-}
-
--- Rental Zones (10+ examples provided)
-Config.Zones = {
-    [1] = {
-        name = 'LS Airport Rentals',
-        coords = vector3(-986.64, -2690.21, 13.02),
-        spawn = vector4(-989.63, -2706.8, 13.22, 333.45),
-        vehicles = {
-            {model = 'asbo', name = 'Asbo', rentalPrice = 200, brand = 'Maxwell', category = 'Compacts'},
-            -- ...
-        },
-        logo = 'nui://mnc-rentals/web/images/Trent.png',
-        style = 'style2',
-        ped = {
-            model = 'a_m_y_business_01',
-            coords = vector4(-986.64, -2690.21, 14.02, 160.0),
-            animationSet = {
-                dict = 'amb@world_human_leaning@male@wall@back@legs_crossed@base',
-                anims = {'idle_a', 'idle_b', 'idle_c'}
-            }
-        },
-    },
-    -- More zones...
-}
-```
-
-### 5️⃣ Add Items to QBCore
-
-No new items needed beyond vehicles. If RequireItem is true, ensure 'driver_license' exists in qb-core/shared/items.lua.
+This resource does not ship a SQL file — it inserts into the `insured_vehicles`, `registered_vehicles`, and `inspected_vehicles` tables, which are expected to already exist (typically created by the companion **mnc-insurance** script). Make sure those tables exist in your database if `GrantTemporaryInsurance` is enabled.
 
 ---
 
 ## ⚙️ Configuration Guide
 
-### 🚗 Vehicle Configuration (per zone)
-
 ```lua
-vehicles = {
-    {model = 'asbo', name = 'Asbo', rentalPrice = 200, brand = 'Maxwell', category = 'Compacts'},
-    {model = 'asea', name = 'Asea', rentalPrice = 300, brand = 'Declasse', category = 'Sedans'},
-    -- Add more...
-}
+Config.Fuel = 'legacy'          -- 'legacy', 'cdn', 'ox', or 'standalone'
+Config.Keys = 'qb'
+Config.Warp = true
+Config.GrantTemporaryInsurance = true  -- requires mnc-insurance
+Config.RequireItem = true
+Config.RequiredItem = 'driver_license'
 ```
 
-### 🧑 Ped Configuration (per zone)
+Each entry in `Config.Zones` defines a rental location:
 
 ```lua
-ped = {
-    model = 'a_m_y_business_01',
-    coords = vector4(x, y, z, heading),
-    animationSet = {
-        dict = 'amb@world_human_leaning@male@wall@back@legs_crossed@base',
-        anims = {'idle_a', 'idle_b', 'idle_c'}
-    }
+[1] = {
+    name = 'LS Airport Rentals',
+    coords = vector3(-986.64, -2690.21, 13.02), -- NPC location
+    spawn = vector4(-989.63, -2706.8, 13.22, 333.45), -- Vehicle spawn
+    vehicles = {
+        {model = 'asbo', name = 'Asbo', rentalPrice = 200, brand = 'Maxwell', category = 'Compacts'},
+    },
+    style = 'style2', -- UI theme
+    ped = { model = 'a_m_y_business_01', coords = vector4(...), animationSet = { dict = '...', anims = {'idle_a','idle_b','idle_c'} } },
 }
-```
-
-### 🎨 UI Style Configuration
-
-```lua
-style = 'style2',  -- Choose from style1 to style5
-logo = 'nui://mnc-rentals/web/images/Trent.png',
 ```
 
 ---
 
 ## 🎮 Controls & Usage
 
-### Player Controls
-| Key | Action |
-|-----|--------|
-| `E` | Open rental menu (at NPC) or return vehicle (at NPC/spawn point) |
-
-### Rental Process
-1. Approach rental NPC (3D text prompt)
-2. Press E to open UI
-3. Select category and vehicle
-4. Choose duration (1-3 hours)
-5. Confirm rental (deducts cash)
-6. Vehicle spawns with full fuel and keys
-7. Return to any location's NPC or spawn point for refund
-
-### Admin/Dev Tools
-- Enable Config.Debug for ped spawning logs
-- Monitor console for expiration/cleanup messages
-
----
-
-## 🧪 System Mechanics
-
-### Rental System
-1. **Processing**: Check money, item, and rental limit
-2. **Spawning**: Load model, set plate, colors, fuel, keys
-3. **Documentation**: Grant temp insurance/registration/inspection
-4. **Tracking**: Store in activeRentals table with endTime
-5. **Expiration**: Auto-remove docs after time; notify player
-6. **Return**: Refund 10%, delete vehicle, clear records
-7. **Cleanup**: On disconnect or server cleanup thread
-
-### Ped System
-1. **Spawning**: Create ped on resource start; network sync
-2. **Animations**: Random idle anims from set
-3. **Respawn**: Check every minute; respawn if missing
-4. **Cleanup**: Delete on resource stop or manual cleanup
-
-### Database Integration
-- Insert into insured/registered/inspected on rental
-- Delete on return/expiration
-- Load checks to avoid duplicates
+- **[E]** near an NPC clerk — open the rental catalogue
+- **[E]** near a zone's vehicle spawn point while driving a rented vehicle — return it for a refund
 
 ---
 
 ## 🔧 Troubleshooting
 
-### Common Issues
-
-**UI not opening:**
-- Ensure ox_lib is started
-- Check NUI focus (SetNuiFocus)
-- Verify web/index.html loads
-
-**Peds not spawning:**
-- Enable Config.Debug for logs
-- Check model hash loading
-- Verify animation dict exists
-
-**Insurance not granting:**
-- Install mnc-insurance
-- Set Config.GrantTemporaryInsurance = true
-- Check database tables exist
-
-**Vehicle not spawning:**
-- Verify model in qb-core/shared/vehicles.lua
-- Check spawn coords are clear
-- Look for hash loading errors
-
-**Returns not working:**
-- Ensure in proximity of NPC or spawn
-- Check activeRentals table in client
-- Verify plate matches
+- **No temporary insurance/registration appears** — confirm `mnc-insurance`'s database tables exist and `Config.GrantTemporaryInsurance` is `true`.
+- **Vehicle spawns without fuel** — check `Config.Fuel` matches the fuel resource actually running on your server.
+- **Rental NPC missing** — the script auto-respawns clerks every minute; enable `Config.Debug` to see respawn logs in console.
+- **"You can only have a maximum of 3 active rentals"** — this is a hardcoded server-side limit in `server/server.lua`.
 
 ---
 
 ## 📝 Credits & License
 
-**Author**: Stan Leigh  
-**Version**: 1.0.0  
-**Framework**: QBCore  
+**Author**: Stan Leigh
+**Version**: 1.0.0
+**Framework**: QBCore
 
-This project is licensed under the [MIT License](https://opensource.org/licenses/MIT).
-
-### Contributing
-Contributions are welcome! Please:
-1. Fork the repository
-2. Create a feature branch
-3. Submit a pull request with detailed description
-
----
-
-## 📞 Support & Community
-
-[![Discord](https://img.shields.io/badge/Discord-Join%20Server-7289da?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/aTBsSZe5C6)
-
-[![GitHub](https://img.shields.io/badge/GitHub-View%20Script-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/MnCLosSantos/mnc-rentals)
-
----
-
-## 🔄 Changelog
-
-### Version 1.0.0 (Initial Release)
-**New Features:**
-- ✨ Core rental system with UI and multi-zone support
-- ✨ Temporary insurance/registration/inspection integration
-- ✨ Ped spawner with animations and respawn logic
-- ✨ Rental limits, refunds, and cross-location returns
-- ✨ Fuel and key system integrations
-- ✨ Database persistence for vehicle docs
-- ✨ Blip and 3D text prompts
-- ✨ Cleanup threads for expirations and disconnects
-
-**Improvements:**
-- 🔧 Optimized proximity loops for performance
-- 🔧 Enhanced NUI with category sorting and vehicle images
-- 🔧 Added debug mode for ped management
-
-**Bug Fixes:**
-- 🐛 Fixed ped netID sync issues
-- 🐛 Resolved vehicle plate duplicates
-- 🐛 Corrected refund calculations
-- 🐛 Fixed cleanup on resource stop
-
----
-
-**Enjoy realistic vehicle rentals on your FiveM server! 🚗**
+Distributed as part of the MnCLosSantos mod-dump collection — open source, please credit the original author if you edit and re-release.
