@@ -15,7 +15,7 @@ MnC Transfer Vehicle is a peer-to-peer vehicle ownership transfer system built a
 ## ✨ Key Features
 
 **Transfer Flow**
-- `/transfervehicle [ID] [amount]` — must be run while sitting in an owned, unfinanced vehicle; opens an NUI seller form pre-filled with the vehicle's plate, model, and mileage pulled from `player_vehicles`
+- `/transfervehicle` — must be run while sitting in an owned, unfinanced vehicle; opens an NUI seller form pre-filled with the vehicle's plate, model, and mileage pulled from `player_vehicles`
 - Seller enters a buyer's server ID and sale amount (or leaves amount blank/zero to gift the vehicle); the buyer must be within `Config.TransferDistance` meters
 - Buyer receives an NUI approval screen showing vehicle and price details, and must digitally sign to accept or can deny the transfer
 - Pending transfers expire automatically after `Config.DocumentExpiration` (default 5 minutes) if the buyer doesn't respond
