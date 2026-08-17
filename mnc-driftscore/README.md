@@ -1,6 +1,5 @@
-# 🏎️ MNC Drift Score HUD
+# 🏁 MNC Drift Score
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![FiveM](https://img.shields.io/badge/FiveM-Ready-green.svg)](https://fivem.net/)
 [![QBCore](https://img.shields.io/badge/Framework-QBCore-blue.svg)](https://github.com/qbcore-framework)
 [![Version](https://img.shields.io/badge/Version-1.0.0-brightgreen.svg)]()
@@ -9,245 +8,96 @@
 
 ## 🌟 Overview
 
-A **comprehensive drift scoring system** for QBCore-based FiveM servers featuring an immersive HUD with score tracking, combo multipliers, advanced drift detection, customizable visual styles, and persistent player preferences. Built with performance and realism in mind for engaging drift gameplay.
+MNC Drift Score is a live drifting-scoring HUD that analyzes a player's driving angle, speed, proximity to obstacles, and other real-time vehicle telemetry to calculate a running drift score, chained combo multipliers, and named "combo" callouts (e.g. "Tokyo Style", "Wall Runner"), rendered through a themeable NUI overlay with 25 selectable color styles.
 
 ---
 
 ## ✨ Key Features
 
-### 🎯 Drift Scoring & Detection
-- **Real-time drift calculation** based on angle, speed, proximity, and duration
-- **Chain system** with timeouts and resets (e.g., spin-out, collision, or inactivity)
-- **Advanced combos**: Tandem, Reverse Entry, Clutch Kick, Chicane, Donut, E-Brake, Link Drift, and more
-- **Proximity detection** to walls/objects for bonus multipliers
-- **Nearby player detection** for tandem bonuses
-- **Spin-out prevention** with rotation rate checks
-- **Collision detection** using vehicle health monitoring
+**Drift Detection & Scoring**
+- Calculates drift angle from the difference between vehicle velocity direction and heading, only counting it as a drift above `Config.DriftThresholdAngle` and `Config.MinDriftSpeed`
+- Awards points per tick based on speed × angle, multiplied by the current combo multiplier, and accumulates into a running chain score
+- Detects spin-outs (excessive angle or rotation velocity) and crashes (sudden health/velocity drops) to reset the current chain
+- Chain auto-banks into the total score after `Config.ComboTimeout` (3.5s) of no drifting, and the total resets entirely after `Config.InactiveResetTime` (5s) of inactivity
 
-### 📊 HUD & Visuals
-- **Toggleable HUD elements**: Score, Multiplier, Combo
-- **Customizable positions** for each HUD box
-- **Animated transitions** for show/hide effects
-- **Notification system** for chain resets, style changes, and events
-- **Glow effects** for score gains/losses
-- **Persistent HUD toggles** from config
+**Combo System**
+- 20+ named combos evaluated every tick, covering angle thresholds, speed thresholds, wall proximity (raycast-based), drift duration, and compound conditions (angle+speed, angle+proximity)
+- Advanced combos detect tandem drifting (nearby AI-free players also drifting), reverse-entry drifts, clutch-kick throttle blips, chicane heading changes, donuts, e-brake timing, and sustained "link" chains
+- All active combos stack additively into the current multiplier and are displayed together as a combo string
 
-### 🎨 Style Customization
-- **25+ visual styles** with unique colors, gradients, and themes (e.g., Classic Green, Cyberpunk Neon, Blood Moon)
-- **Persistent style saving** per player via database
-- **In-game style selector** in help menu
-- **Dynamic style application** with immediate HUD updates
-
-### ❓ Help & Settings Menu
-- **Interactive modal** with commands list, scoring explanation, and style grid
-- **Style previews** showing colors and descriptions
-- **Clickable style cards** to change themes instantly
-- **ESC key support** to close menu
-- **NUI focus management** for seamless interaction
-
-### 🔧 Technical Features
-- **Database persistence** for player styles
-- **QBCore integration** for player loading/unloading
-- **Fallback initialization** for reliable startup
-- **Debug logging** for development
-- **Configurable thresholds**: Min angle, max angle, spin-out rate, timeouts, etc.
+**HUD & Styling**
+- NUI overlay shows score, multiplier, and active combo text, individually toggleable and positionable via `Config.HUD`
+- 25 predefined visual styles (gradients/colors) selectable in-game; the chosen style is saved per-citizen to a `mnc_drift_styles` MySQL table (auto-created)
+- HUD auto-hides while the pause menu is open and re-shows when closed
 
 ---
 
 ## 📋 Requirements
 
-| Dependency | Version | Required |
-|------------|---------|----------|
-| QBCore Framework | Latest | ✅ Yes |
-| oxmysql | Latest | ✅ Yes |
-| ox_lib | Latest | ✅ Yes |
+| Dependency | Required |
+|---|---|
+| qb-core | Yes |
+| oxmysql | Yes |
+| ox_lib | Yes |
 
 ---
 
 ## 🚀 Installation
 
-### 1️⃣ Download & Extract
-
 ```bash
-# Clone from GitHub
-git clone https://github.com/YourUsername/mnc-driftscore.git
-
-# OR download ZIP from Releases
-```
-
-Place into your resources folder:
-```
+# Place into your resources folder
 [server-data]/resources/[custom]/mnc-driftscore/
 ```
 
-### 2️⃣ Database Setup
-
-The script **automatically creates** the required table on first start:
-
-- `mnc_drift_styles` - Tracks player style preferences
-
-No manual SQL import needed!
-
-### 3️⃣ Add to Server Config
-
 ```lua
 # server.cfg
-ensure oxmysql
 ensure mnc-driftscore
 ```
 
-### 4️⃣ Configure Settings
-
-Edit `config.lua` to customize:
-
-```lua
--- Default settings
-Config.DefaultStyle = 1
-Config.DriftThresholdAngle = 15.0
-Config.MaxDriftAngle = 120.0
-Config.SpinOutRotationRate = 3.5
-Config.MinDriftSpeed = 5.0
-Config.PointsMultiplierBase = 1.0
-Config.ComboTimeout = 3500
-Config.InactiveResetTime = 15000
-
--- HUD positions
-Config.HUD = {
-    combo = { enabled = true, position = { top = "80px", right = "20px" } },
-	multiplier = { enabled = true, position = { top = "50px", right = "850px" } },
-	score = { enabled = true, position = { top = "100px", right = "850px" } },
-}
-
--- Style examples (add/remove as needed)
-Config.Styles = {
-    [1]  = { name = "Classic Green",        bg = "rgba(30,30,46,0.5)",      text = "#ffffff", accent = "#4CAF50",  description = "Clean dark theme with green accents" },
-    -- ... more styles ...
-}
-
--- Combo configurations
-Config.Combos = {
-    -- Angle based
-    { name = "Mild Drift",       comboType = "angle", condition = function(a) return a > 15 and a <= 30 end,      multiplier = 0.4 },
-    -- ... more combos ...
-}
-```
-
-### 5️⃣ Add Items to QBCore
-
-No items are required for this script, as it's command-based. However, ensure QBCore is properly configured for player data handling.
+No manual database import is required — the `mnc_drift_styles` table (stores each citizen's chosen HUD style) is created automatically via `CREATE TABLE IF NOT EXISTS` on resource start.
 
 ---
 
 ## ⚙️ Configuration Guide
 
-### 🎯 Drift Detection Settings
-
 ```lua
-Config.DriftThresholdAngle = 15.0  -- Minimum angle to start drifting
-Config.MaxDriftAngle = 120.0       -- Angle beyond which it's a spin-out
-Config.SpinOutRotationRate = 3.5   -- Rotation speed for spin-out detection
-Config.MinDriftSpeed = 5.0         -- Minimum speed in m/s to score points
-Config.ComboTimeout = 3500         -- ms without drifting to end chain
-Config.InactiveResetTime = 15000   -- ms without activity to reset total score
-```
+Config.DriftThresholdAngle = 15.0
+Config.MaxDriftAngle = 150.0
+Config.MinDriftSpeed = 5.0
+Config.ComboTimeout = 3500
+Config.InactiveResetTime = 5000
 
-### 📊 HUD Configuration
-
-```lua
-Config.HUD.combo = {
-    enabled = true, 
-    position = { top = "80px", right = "20px" }  -- CSS positions (top, right, bottom, left)
+Config.HUD = {
+    combo = { enabled = true, position = { top = "1020px", right = "850px" } },
+    multiplier = { enabled = true, position = { top = "50px", right = "850px" } },
+    score = { enabled = true, position = { top = "100px", right = "850px" } },
 }
 ```
 
-### 🎨 Adding New Styles
-
-Add to `Config.Styles` table:
-
-```lua
-[26] = {
-    name = "Custom Style",
-    bg = "rgba(0,0,0,0.5)",
-    text = "#ffffff",
-    accent = "#ff0000",
-    description = "Your custom theme"
-}
-```
-
-### 🔄 Combo System
-
-Each combo has a type, condition function, and multiplier:
-
-```lua
-{ 
-    name = "Tandem Bonus",     
-    comboType = "tandem", 
-    condition = function(nearbyDrifters) return nearbyDrifters >= 1 end, 
-    multiplier = 1.4 
-}
-```
+`DriftThresholdAngle`/`MinDriftSpeed` tune drift sensitivity, while `Config.HUD` lets you enable/disable and reposition each HUD element independently. `Config.Combos` (a large table) defines every named combo, its trigger condition, and its multiplier bonus.
 
 ---
 
-## 🛠️ Usage
+## 🎮 Controls & Usage
 
-### Commands
-- `/driftscore` - Toggle the Drift HUD on/off
-- `/driftstyle [1-25]` - Change visual style (number from config)
-- `/drifthudhelp` - Open help menu with style selector and info
-
-### In-Game Mechanics
-- Enter a vehicle and start drifting to begin scoring
-- Maintain chains for multipliers and combos
-- Use help menu to browse and select styles
-- Notifications appear for resets and events
+- **`/driftscore`**: Toggles the drift HUD on/off; banks any active chain score when turned off.
+- **`/driftstyle [1-25]`**: Instantly switches to the given HUD color style and saves it to the database.
+- **`/drifthudhelp`**: Opens an in-NUI help/style-browser panel.
 
 ---
 
-## 📜 Changelog
+## 🔧 Troubleshooting
 
-### Version 1.0.0
-**New Features:**
-- ✨ Initial public release with core drift scoring system
-- ✨ Added 25+ visual styles with database persistence
-- ✨ Implemented advanced combo detection (angle, speed, proximity, etc.)
-- ✨ Created interactive help menu with style selector
-- ✨ Added notification system for chain events
-- ✨ Implemented HUD toggles and positions
-- ✨ Added spin-out and collision detection
-
-**Improvements:**
-- 🔧 Optimized drift detection loop for better performance
-- 🔧 Enhanced NUI focus management for help menu
-- 🔧 Improved style application with dynamic updates
-- 🔧 Added fallback initialization for QBCore loading
-
-**Bug Fixes:**
-- 🐛 Fixed NUI callbacks not registering properly
-- 🐛 Resolved style index mismatches between Lua/JS
-- 🐛 Corrected HUD hiding on player unload
-- 🐛 Fixed chain reset notifications not showing
-- 🐛 Resolved modal not closing on ESC
-- 🐛 Fixed database table creation errors
-- 🐛 Corrected combo conditions causing false positives
+- **HUD never appears**: Run `/driftscore` to enable it — the HUD is hidden by default until toggled on, and also stays hidden while the pause menu is open.
+- **Style doesn't persist between sessions**: Confirm `oxmysql` is running and the `mnc_drift_styles` table was created; check console for the "table checked/created" log line on startup.
+- **Score resets unexpectedly mid-drift**: This is by design — hard health/velocity drops are treated as crashes and end the current chain (see `isCrash` logic in `client.lua`).
 
 ---
 
-## ⚠️ Important Notes
+## 📝 Credits & License
 
-1. **Server Performance**: Tested stable with 128+ players; drift detection runs every 120ms
-2. **Database**: Requires oxmysql - MariaDB 10.3+ recommended
-3. **Compatibility**: QBCore only - not compatible with ESX
-4. **Legal**: For use on FiveM servers only, respect Rockstar's ToS
-5. **Support**: Community-driven, no official warranty provided
+**Author**: Stan Leigh
+**Version**: 1.0.0
+**Framework**: QBCore
 
-## 📞 Support & Community
-For support, bug reports, or feature requests: 
-- 🐛 Open an issue on GitHub 
-- 💬 Join our Discord community 
-- 📚 Check existing documentation 
-- 🔍 Search closed issues first 
-
---- 
-
-**Enjoy epic drifts on your FiveM server! 🏎️**
+Distributed as part of the MnCLosSantos mod-dump collection — open source, please credit the original author if you edit and re-release.
