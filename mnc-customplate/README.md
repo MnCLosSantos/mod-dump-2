@@ -1,6 +1,5 @@
-# 🚗 MNC Custom Plate System
+# 🔖 MNC Custom Plate
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![FiveM](https://img.shields.io/badge/FiveM-Ready-green.svg)](https://fivem.net/)
 [![QBCore](https://img.shields.io/badge/Framework-QBCore-blue.svg)](https://github.com/qbcore-framework)
 [![Version](https://img.shields.io/badge/Version-1.0.0-brightgreen.svg)]()
@@ -9,294 +8,90 @@
 
 ## 🌟 Overview
 
-A **fully-featured custom license plate system** for QBCore-based FiveM servers. Players can personalize their vehicle plates using a consumable item, with a live USA-style plate preview UI, duplicate plate protection checked directly against the `player_vehicles` database, optional job locking, and an admin command bypass. Built with immersion and server safety in mind.
+MNC Custom Plate lets players change the license plate on a nearby vehicle using a consumable **Custom Plate Kit** item, applied through an ox_lib-powered progress bar and a themed NUI plate editor. Server-side it validates the requested text, checks for duplicate plates in `player_vehicles`, and re-inserts the vehicle record under its new plate so the change persists through `qb-garages`.
 
 ---
 
 ## ✨ Key Features
 
-### 🪪 Live Plate Preview UI
-- **USA-style plate design** with real-time text preview as you type
-- **5 selectable color themes**: White Classic, Black Edition, Ocean Blue, Red Fury, Forest Green
-- **Character counter** with enforced min/max length validation
-- **Alphanumeric-only filter** — no invalid characters can be entered
-- **Keyboard support**: press `ESC` to close at any time
+**Plate Application**
+- Usable item (`custom_plate_kit`) opens an NUI plate designer where the player types a plate (1–8 characters) and picks a plate theme/state text
+- Plays a carrying animation and a 5-second `lib.progressBar` while the plate is being applied
+- Automatically detects the closest vehicle within 5m (or the vehicle the player is currently in)
 
-### 🔒 Duplicate Plate Protection
-- **Server-side database check** against `player_vehicles` before any plate is applied
-- **Case-insensitive comparison** to prevent near-duplicate exploits
-- **Real-time rejection** with ox_lib notification if plate is already taken
+**Server Validation & Persistence**
+- Rejects plates that are too long/short, contain invalid characters, or match the vehicle's current plate
+- Checks `player_vehicles` for duplicate plates (ignoring spacing/case) before allowing the change
+- Deletes and re-inserts the owned vehicle's DB row under the new plate, resetting its state to "in garage" and wiping mods (player is warned of this in the UI)
+- Removes the plate kit item from the player's inventory on success
 
-### 🎬 Immersive Application
-- **Cancellable ox_lib progress bar** (5 seconds) while applying the plate
-- **Ped animation** plays for the full duration of the progress bar
-- **Automatic cleanup** if the player cancels or dies mid-apply
-
-### 📦 Item-Based System
-- **Consumable item** (`custom_plate_kit`) registered with qb-inventory
-- **Item consumed only on successful** plate application — no wasted kits on failures
-- **Optional job lock** — restrict item use to specific jobs and grades
-- **shouldClose integration** to properly dismiss inventory on use
-
-### 🛡️ Admin Command
-- **`/customplate`** command for admins — bypasses item requirement entirely
-- **Permission-based access** using QBCore permission groups (god, admin, superadmin)
-- **Fully configurable** group list in `config.lua`
-
-### 🔔 ox_lib Notifications
-- **Success, error, and info** notifications for every outcome
-- Applied plate text confirmed in the success message
-- Cancellation, duplicate, invalid format, and permission errors all notify clearly
+**Admin Mode**
+- `/customplate` command (configurable name) lets admins open the same UI and apply any plate to a nearby vehicle without needing the item, gated by `Config.AdminGroups` (ACE groups or QBCore permission groups)
 
 ---
 
 ## 📋 Requirements
 
-| Dependency | Version | Required |
-|---|---|---|
-| QBCore Framework | Latest | ✅ Yes |
-| qb-inventory | Latest | ✅ Yes |
-| ox_lib | Latest | ✅ Yes |
-| oxmysql | Latest | ✅ Yes |
+| Dependency | Required |
+|---|---|
+| qb-core | Yes |
+| ox_lib | Yes |
+| oxmysql | Yes |
 
 ---
 
 ## 🚀 Installation
 
-### 1️⃣ Download & Place Resource
-
 ```bash
-# Clone from GitHub
-git clone https://github.com/YourUsername/mnc-customplate.git
-
-# OR download ZIP from Releases
-```
-
-Place into your resources folder:
-```
+# Place into your resources folder
 [server-data]/resources/[custom]/mnc-customplate/
 ```
 
-### 2️⃣ Add to Server Config
-
 ```lua
 # server.cfg
-ensure oxmysql
-ensure ox_lib
-ensure qb-core
-ensure qb-inventory
 ensure mnc-customplate
 ```
 
-### 3️⃣ Add Item to QBCore
-
-Open `qb-core/shared/items.lua` and add:
-
-```lua
-['custom_plate_kit'] = {
-    ['name']        = 'custom_plate_kit',
-    ['label']       = 'Custom Plate Kit',
-    ['weight']      = 200,
-    ['type']        = 'item',
-    ['image']       = 'custom_plate_kit.png',
-    ['unique']      = false,
-    ['useable']     = true,
-    ['shouldClose'] = true,
-    ['combinable']  = nil,
-    ['description'] = 'Apply a custom license plate to your vehicle.',
-},
-```
-
-### 4️⃣ Add Item Image
-
-Place `custom_plate_kit.png` into:
-```
-qb-inventory/html/images/custom_plate_kit.png
-```
-
-### 5️⃣ Configure Settings
-
-Edit `config.lua` to match your server:
-
-```lua
--- Item name
-Config.Item = 'custom_plate_kit'
-
--- Plate length limits
-Config.MaxPlateLength = 8
-Config.MinPlateLength = 1
-
--- Apply animation duration (ms)
-Config.ProgressDuration = 5000
-
--- Admin groups with /customplate access
-Config.AdminGroups = { 'god', 'admin', 'superadmin' }
-
--- Job lock (nil = no restriction)
-Config.JobLock = nil
--- Example: Config.JobLock = { name = 'mechanic', grade = 0 }
-
--- State label shown on plate preview
-Config.PlateState = 'MNC STATE'
-```
-
-### 6️⃣ Restart Resources
-
-```
-restart qb-core
-restart qb-inventory
-start mnc-customplate
-```
+Add the item definition from `install/items.txt` to your `qb-core/shared/items.lua` — it adds `custom_plate_kit`, a usable item players consume to apply a plate. The script prints a warning on start if this item is missing from `QBCore.Shared.Items`.
 
 ---
 
 ## ⚙️ Configuration Guide
 
-### 🎨 Plate Theme Configuration
-
 ```lua
-Config.PlateThemes = {
-    { id = 'default', label = 'White Classic', bg = '#FFFFFF', text = '#1a1a2e', border = '#c9aa71' },
-    { id = 'black',   label = 'Black Edition', bg = '#1a1a1a', text = '#FFD700', border = '#FFD700' },
-    { id = 'blue',    label = 'Ocean Blue',    bg = '#003087', text = '#FFFFFF', border = '#FFD700' },
-    { id = 'red',     label = 'Red Fury',      bg = '#8B0000', text = '#FFFFFF', border = '#c9aa71' },
-    { id = 'green',   label = 'Forest Green',  bg = '#1B4332', text = '#FFFFFF', border = '#FFD700' },
-}
-```
-
-Each theme requires four fields: `id` (unique string), `label` (display name), `bg` (hex background), `text` (hex text color), and `border` (hex border color). Add as many themes as needed.
-
-### 🔐 Job Lock Configuration
-
-```lua
--- Allow only mechanics grade 0+ to use the item
-Config.JobLock = { name = 'mechanic', grade = 0 }
-
--- Allow no job restriction (default)
-Config.JobLock = nil
-```
-
-### 🛡️ Admin Command Configuration
-
-```lua
--- Enable or disable the /customplate command
+Config.Item = 'custom_plate_kit'
+Config.MaxPlateLength = 8
+Config.MinPlateLength = 1
+Config.ProgressDuration = 5000
+Config.AdminGroups = { 'admin', 'god', 'superadmin' }
+Config.JobLock = nil  -- e.g. { name = 'mechanic', grade = 0 }
 Config.AdminCommand = true
 Config.AdminCommandName = 'customplate'
-
--- Groups that can use the admin command
-Config.AdminGroups = { 'god', 'admin', 'superadmin' }
 ```
 
-### ⏱️ Animation & Progress Configuration
-
-```lua
--- Animation dictionary and clip played during application
-Config.AnimDict = 'anim@heists@box_carry@'
-Config.AnimName = 'idle'
-
--- Progress bar duration in milliseconds
-Config.ProgressDuration = 5000
-```
+`Config.JobLock` can restrict plate-kit usage to a specific job/grade; leave it `nil` to allow anyone holding the item. `Config.PlateThemes` defines the visual plate style(s) shown in the NUI editor (ships with a single white theme).
 
 ---
 
-## 🔄 How It Works
+## 🎮 Controls & Usage
 
-1. **Player uses** `custom_plate_kit` from inventory (or admin runs `/customplate`)
-2. **Server validates** item ownership and optional job lock before opening UI
-3. **UI opens** with live USA-style plate preview — player types their desired plate text
-4. **Player selects** a color theme from the picker
-5. **Player clicks Apply** — UI closes and the animation + progress bar begin
-6. **Server validates** plate format (length, characters) and checks `player_vehicles` for duplicates
-7. **If approved** — database is updated, item is consumed, plate is applied visually
-8. **ox_lib notification** confirms the new plate or explains the rejection
+- **Item use**: Using `custom_plate_kit` from the inventory opens the plate editor NUI for the nearest vehicle.
+- **`/customplate`**: Admin-only command (if `Config.AdminCommand` is true) that opens the same editor without consuming an item, restricted to `Config.AdminGroups`.
 
 ---
 
-## 🐛 Troubleshooting
+## 🔧 Troubleshooting
 
-**UI not opening when using the item:**
-- Confirm `Config.Item` matches the item name in `qb-core/shared/items.lua`
-- Check that `useable = true` and `shouldClose = true` are set on the item
-- Verify `mnc-customplate` is started after `qb-core` and `qb-inventory`
-
-**Plate not saving to database:**
-- Ensure the player is in the driver seat of a vehicle owned in `player_vehicles`
-- Check oxmysql console for query errors
-- Verify the vehicle's current plate exists in the DB — personal vehicles only
-
-**Duplicate plate check not working:**
-- Confirm oxmysql is running and connected
-- Check `player_vehicles` table exists and has a `plate` column
-- Look for server console errors on the `mnc-customplate:server:applyPlate` event
-
-**Admin command not working:**
-- Verify the player's QBCore permission group is listed in `Config.AdminGroups`
-- Confirm `Config.AdminCommand = true` in `config.lua`
-- Check that the command name doesn't conflict with another resource
-
-**Progress bar not showing:**
-- Confirm `ox_lib` is started before `mnc-customplate`
-- Check client console for ox_lib errors
+- **"Item not found" warning on start**: Add `custom_plate_kit` from `install/items.txt` to your `qb-core` shared items.
+- **"That plate is already taken!"**: The script checks `player_vehicles` for any existing row with the same normalized plate; pick a different combination.
+- **Mods reset after a plate change**: This is expected — the script re-inserts the vehicle row with `mods` wiped to `'{}'` when swapping plates on an owned vehicle.
 
 ---
 
 ## 📝 Credits & License
 
-**Author**: MNC Scripts  
-**Version**: 1.0.0  
-**Framework**: QBCore  
+**Author**: MNC Scripts
+**Version**: 1.0.0
+**Framework**: QBCore
 
-This project is licensed under the [MIT License](https://opensource.org/licenses/MIT).
-
-### Contributing
-Contributions are welcome! Please:
-1. Fork the repository
-2. Create a feature branch
-3. Submit a pull request with a detailed description
-
----
-
-## 📞 Support & Community
-
-For support, bug reports, or feature requests:
-- Open an issue on GitHub
-- Join our Discord community
-- Check existing documentation
-
----
-
-## 🔄 Changelog
-
-### Version 1.0.0 (Current Release)
-**New Features:**
-- ✨ Initial release of MNC Custom Plate system
-- ✨ Live USA-style plate preview with real-time text updates
-- ✨ 5 selectable color themes with fully hex-configurable colors
-- ✨ Server-side duplicate plate check against `player_vehicles` database
-- ✨ Case-insensitive plate comparison to block near-duplicate exploits
-- ✨ Consumable item system (`custom_plate_kit`) with qb-inventory integration
-- ✨ Cancellable ox_lib progress bar with ped animation during application
-- ✨ Optional job lock system with configurable job name and minimum grade
-- ✨ Admin `/customplate` command bypassing item requirement
-- ✨ Permission-based admin access using QBCore groups (god, admin, superadmin)
-- ✨ ox_lib notifications for all success, error, and cancellation states
-- ✨ Alphanumeric-only plate validation (letters, numbers, spaces)
-- ✨ Configurable min/max plate character length
-- ✨ Item consumed only on successful plate application — no wasted kits on rejected attempts
-- ✨ ESC key support to close the UI at any time
-- ✨ Configurable plate state label displayed on the preview UI
-
----
-
-## ⚠️ Important Notes
-
-1. **Database**: Only updates plates for vehicles stored in `player_vehicles` — temporary or admin-spawned vehicles will have the plate applied visually but no DB record will be updated
-2. **GTA Limit**: GTA V enforces a maximum of 8 characters on license plates — do not set `Config.MaxPlateLength` beyond 8
-3. **Compatibility**: QBCore only — not compatible with ESX
-4. **oxmysql**: Required for the duplicate check query — do not replace with another MySQL wrapper without updating the server script
-5. **Legal**: For use on FiveM servers only, respect Rockstar's Terms of Service
-
----
-
-**Give your players the personal touch they deserve! 🚗**
+Distributed as part of the MnCLosSantos mod-dump collection — open source, please credit the original author if you edit and re-release.
