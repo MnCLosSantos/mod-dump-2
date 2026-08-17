@@ -1,166 +1,117 @@
-# 🗑️ MNC Scrap N Bins
+# 🗑️ MnC Scrap N Bins
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![FiveM](https://img.shields.io/badge/FiveM-Ready-green.svg)](https://fivem.net/)
-[![Framework](https://img.shields.io/badge/Framework-QBCore%20%7C%20QBX-blue)](https://github.com/qbcore-framework)
-[![ ox_lib ](https://img.shields.io/badge/ox__lib-Required-orange)](https://overextended.dev/ox_lib)
+[![QBCore](https://img.shields.io/badge/Framework-QBCore-blue.svg)](https://github.com/qbcore-framework)
 [![Version](https://img.shields.io/badge/Version-2.0.0-brightgreen.svg)]()
-
-Dynamic **bin diving** & **scrap searching** system for modern QBCore/QBX servers.
-
-Search trash bins, dumpsters, trash bags and vehicle wrecks with immersive animations, directional sounds, optional minigames, entity cooldowns, needle prick risk, and a weighted tiered loot table.
 
 ---
 
-## ✨ Features
+## 🌟 Overview
 
-- 🔎 **Target-based interaction** (qb-target / ox_target)
-- 🎮 Optional **ox_lib skill checks** (different difficulty per bin/scrap)
-- 🕒 Per-entity **cooldown** (prevent spam farming)
-- 🎥 Realistic rummaging **animation** + context-aware **sounds**
-- 💉 Optional **needle prick** mechanic (bins only) – screen effects, damage, pain anim
-- 📦 **Tiered loot** (Common / Uncommon / Rare) with configurable chances & items
-- ⚖️ Supports **qb-inventory** and **ox_inventory**
-- 🔔 Notifications via **qb** or **ox_lib**
-- 📊 Progress via **qb**, **ox_lib_bar** or **ox_lib_circle**
+MnC Scrap N Bins turns the map's dumpsters, trash bags, litter piles, and wrecked-vehicle props into searchable loot spots. Players target a bin or scrap prop, pass an `ox_lib` skill-check minigame, sit through a search animation with contextual rummage sound effects, and have a chance to walk away with tiered loot — or, if unlucky while digging through bins, a nasty needle-prick injury.
+
+---
+
+## ✨ Key Features
+
+**Searchable World Props**
+- Dozens of hardcoded prop hashes are targetable: standard/recycle bins, trash bags, dumpsters, loose rubbish piles, and scrapyard car wrecks (`Config.BinModels` / `Config.ScrapModels`)
+- Works with either `qb-target` or `ox_target` (`Config.Target`)
+- Per-entity search cooldown (`Config.Cooldown`) prevents repeatedly farming the same prop
+
+**Search Flow**
+- Optional skill-check minigame before searching, separately configurable for bins vs. scrap (`wasd`/`1234`/`arrowkeys`/`qwer` key types, per-attempt difficulty, duration)
+- Progress bar/circle via `qb`, `ox_lib_bar`, or `ox_lib_circle` (`Config.Progress`) with a searching animation and movement/combat locked
+- Context-aware rummage sound effects (`Config.RummageSounds`) picked based on the searched prop's archetype (bin/skip/bag/scrap)
+
+**Loot System**
+- `Config.ChanceToFind` gates whether anything is found at all
+- Tiered loot table (`Common`/`Uncommon`/`Rare`) with cumulative percentage rolls and per-tier item pools, quantity capped by `Config.MaxAmount`
+- Supports both `qb-inventory` and `ox_inventory` for adding items, with inventory-full handling
+
+**Needle Prick Hazard**
+- Searching **bins only** (not scrap) carries a configurable chance (`Config.NeedlePrick.Chance`) of a needle-prick injury: notification, red screen effect, camera shake, pain animation, needle sound, and gradual health drain over several damage ticks
 
 ---
 
 ## 📋 Requirements
 
-| Resource           | Required | Notes                                 |
-|--------------------|----------|---------------------------------------|
-| **qb-core** / QBX  | Yes      | Core framework                        |
-| **ox_lib**         | Yes      | Minigames, progress, notifications    |
-| **oxmysql**        | Yes      | (usually already on server)           |
-| qb-target          | Optional | if `Config.Target = "qb-target"`      |
-| ox_target          | Optional | if `Config.Target = "ox_target"`      |
-| qb-inventory       | Optional | if `Config.Inventory = "qb-inventory"`|
-| ox_inventory       | Optional | if `Config.Inventory = "ox_inventory"`|
+| Dependency | Required |
+|---|---|
+| qb-core | Yes |
+| ox_lib | Yes |
+| qb-target or ox_target | Yes (choose via `Config.Target`) |
+| qb-inventory or ox_inventory | Yes (choose via `Config.Inventory`) |
 
 ---
 
 ## 🚀 Installation
 
-1. Download or clone the resource
+```bash
+# Place into your resources folder
+[server-data]/resources/[custom]/mnc-scrapnbins/
+```
 
-   ```bash
-   # Recommended: use git (easier updates)
-   git clone https://github.com/MnCLosSantos/mnc-scrapnbins.git resources/[custom]/mnc-scrapnbins
-   ```
+```lua
+# server.cfg
+ensure mnc-scrapnbins
+```
 
-   or download latest release ZIP → extract to `resources/[custom]/mnc-scrapnbins`
-
-2. Ensure dependencies in server.cfg (order matters)
-
-   ```cfg
-   ensure oxmysql
-   ensure ox_lib
-   ensure qb-core      # or qbx_core
-   # ensure qb-target   # if using
-   # ensure ox_target   # if using
-   ensure mnc-scrapnbins
-   ```
-
-3. Add missing items to `qb-core/shared/items.lua` (or QBX items)
-
-   Make sure **every item** listed in `Config.Tiers` exists. Example:
-
-   ```lua
-   ['plastic']       = {['name'] = 'plastic',       ['label'] = 'Plastic',       weight = 100, ...},
-   ['metal_scrap']   = {['name'] = 'metal_scrap',   ['label'] = 'Metal Scrap',   weight = 200, ...},
-   ['aluminum']      = { ... },
-   ['lockpick']      = { ... },
-   ['advancedlockpick'] = { ... },
-   ['pistol_ammo']   = { ... },
-   ```
-
-4. Restart server or `refresh` + `start mnc-scrapnbins`
+No database tables are required. Make sure every item referenced in `Config.Tiers` (e.g. `plastic`, `metal_scrap`, `advancedlockpick`, `repairkit`, `joint`) exists in your inventory's item list.
 
 ---
 
-## ⚙️ Configuration Highlights
-
-All settings are in `config.lua`
-
-### Core toggles
+## ⚙️ Configuration Guide
 
 ```lua
-Config.CoreName    = 'qb-core'          -- or 'qbx-core'
-Config.Target      = 'ox_target'        -- 'qb-target' | 'ox_target'
-Config.Inventory   = 'ox_inventory'     -- 'qb-inventory' | 'ox_inventory'
-Config.Notify      = 'ox_lib'           -- 'qb' | 'ox_lib'
-Config.Progress    = 'ox_lib_bar'       -- 'qb' | 'ox_lib_bar' | 'ox_lib_circle'
-```
+Config.CoreName  = 'qb-core'
+Config.Target    = "qb-target"     -- "qb-target" or "ox_target"
+Config.Inventory = "qb-inventory"  -- "qb-inventory" or "ox_inventory"
+Config.Notify    = "ox_lib"        -- "qb" or "ox_lib"
+Config.Progress  = "ox_lib_bar"    -- "qb", "ox_lib_bar", "ox_lib_circle"
 
-### Minigame (ox_lib skillCheck)
+Config.SearchTime   = 8000   -- ms to search
+Config.Cooldown     = 45000  -- ms cooldown per entity
+Config.ChanceToFind = 70     -- % chance to find anything
+Config.MaxAmount    = 3      -- max item quantity found
 
-```lua
-Config.Minigame = {
-    Enabled = true,
-    BinSkip = { Type = "wasd",   Difficulty = {"easy","easy","easy","easy"}, Duration = 5000 },
-    Scrap   = { Type = "1234",   Difficulty = {"medium","easy","medium","easy"}, Duration = 6000 }
-}
-```
-
-### Loot tiers (cumulative chance system)
-
-```lua
 Config.Tiers = {
-    Common   = { Chance = 70, Items = {'plastic','metal_scrap','rubber','tosti','glass'} },
-    Uncommon = { Chance = 25, Items = {'aluminum','steel','copper','lockpick','lighter'} },
-    Rare     = { Chance =  5, Items = {'advancedlockpick','repairkit','joint','pistol_ammo'} }
+    Common   = { Chance = 70, Items = {'plastic', 'metal_scrap', 'rubber', 'tosti', 'glass'} },
+    Uncommon = { Chance = 25, Items = {'aluminum', 'steel', 'copper', 'lockpick', 'lighter'} },
+    Rare     = { Chance = 5,  Items = {'advancedlockpick', 'repairkit', 'joint', 'pistol_ammo'} },
 }
 ```
 
-### Risk & timing
-
 ```lua
-Config.SearchTime   = 8000      -- ms
-Config.Cooldown     = 45000     -- ms per entity
-Config.ChanceToFind = 70        -- % to find anything
-Config.MaxAmount    = 3
-
 Config.NeedlePrick = {
     Enabled = true,
-    Chance  = 10,               -- only bins
+    Chance = 10,        -- % chance per successful bin search
     HealthDrain = 15,
-    -- ... screen shake, pain anim, sounds ...
+    DrainTicks = 5,
+    TickInterval = 1600, -- ms between damage ticks
 }
 ```
 
 ---
 
-## 🆕 What's New in v2.0.0
+## 🎮 Controls & Usage
 
-- Full **ox_inventory** support (proper AddItem return checking)
-- Better **sound cleanup** & animation handling
-- Improved **needle prick** realism (configurable shake, vignette, gradual damage)
-- More flexible **sound categories** (Bin / Skip / Bag / Scrap)
-- Entity-specific cooldown tracking (no global timer abuse)
-- Debug prints when items are invalid/missing
+- **Target a bin, dumpster, trash bag, or scrap wreck** and select "Search Trash" / "Search Scrap" from the qb-target/ox_target menu to begin.
 
 ---
 
-## 🛠️ Troubleshooting
+## 🔧 Troubleshooting
 
-| Problem                                 | Possible Fix                                      |
-|-----------------------------------------|---------------------------------------------------|
-| No target option appears                | Check `Config.Target` + ensure target resource running |
-| Minigame doesn't show                   | Make sure `ox_lib` is started & up to date        |
-| "Item not found" / nothing added        | Item missing in `qb-core/shared/items.lua`        |
-| Sounds not playing                      | Check stream folder or sound name spelling        |
-| Animation stuck                         | Increase RequestAnimDict timeout or check dict    |
-| ox_inventory says inventory full        | Player actually has no space                      |
+- **Nothing happens when targeting props** — verify `Config.Target` matches whichever targeting resource is actually running.
+- **"Failed to add item"** — check that the rolled item name from `Config.Tiers` exists in `QBCore.Shared.Items` (invalid items are skipped and logged when `Config.Debug = true`).
+- **Skill check never appears** — set `Config.Minigame.Enabled = false` to bypass it entirely, or verify `ox_lib`'s skill-check UI is loading correctly.
 
 ---
 
-## ❤️ Support & Contributing
+## 📝 Credits & License
 
-Found a bug? Have a cool item/sounds/model suggestion?
+**Author**: Stan Leigh
+**Version**: 2.0.0
+**Framework**: QBCore
 
-→ Open an issue or pull request on GitHub
-
-Enjoy bin diving responsibly! 🗑️🔧
-
-MIT License – feel free to modify & redistribute with credit.
+Distributed as part of the MnCLosSantos mod-dump collection — open source, please credit the original author if you edit and re-release.
