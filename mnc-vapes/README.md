@@ -1,4 +1,4 @@
-# 💨 MNC Vapes System
+# 💨 MnC Vapes
 
 [![FiveM](https://img.shields.io/badge/FiveM-Ready-green.svg)](https://fivem.net/)
 [![QBCore](https://img.shields.io/badge/Framework-QBCore-blue.svg)](https://github.com/qbcore-framework)
@@ -8,395 +8,110 @@
 
 ## 🌟 Overview
 
-A **comprehensive vaping system** for QBCore-based FiveM servers featuring craftable vape devices, customizable juices, realistic puffing animations with particle effects, persistent device management, portable crafting tables, and job-restricted stations. Built with performance and immersion in mind.
+MnC Vapes is a full vape-device roleplay system: players equip and puff on disposable vapes, weed pens, or rebuildable box mods, each with battery, coil, and tank management. A trio of placeable crafting stations lets players brew flavoured vape juice, process raw fruit into flavour concentrates, and build vape hardware from scratch (batteries, shells, coils, tanks, chargers) all the way up to fully packaged starter kits.
 
 ---
 
 ## ✨ Key Features
 
-### 🎭 Vape Usage & Effects
-- **Immersive prop-based animations** with exhale particle effects (smoke clouds)
-- **Configurable puff cooldowns** and exhale durations per device
-- **Multiple effects**: running speed boost, infinite stamina, strength increase, health/food regen, drunk/psycho walk, screen effects (outOfBody, cameraShake, fog, confusion, white overlay)
-- **Cancel puffing** with automatic prop cleanup
-- **Automatic prop detachment** on death/respawn
-- **Battery drainage** and low-battery warnings
-- **Juice consumption** per puff with empty tank notifications
+**Vaping**
+- Three vape device types (`dispo_vape`, `weed_pen`, `box_vape`) each with configurable tank size, ml-per-puff consumption, coil lifespan, max battery, and puff/exhale animation
+- Puffing consumes tank liquid and coil life; juice flavours apply configurable timed status effects (speed boost, infinite stamina, strength, health/food regen, drunk/psycho walk, camera shake, fog, confusion, etc.) defined per-flavour in `Config.VapeJuices`
+- Per-vape context menu (`ox_lib` context) showing battery %, coil status, tank status, and current liquid, with actions to fill with juice, charge, and (on `box_vape`) swap coils/tanks
+- Server-authoritative state cached per player and persisted to MySQL (`mnc_vape_data`, `mnc_juice_data`) with citizenid/slot tracking
 
-### 🔋 Persistent Device Management
-- **Database-backed vape tracking** across sessions (battery, juice, coil, tank, flavor)
-- **Unique IDs** for each vape and juice bottle
-- **Dynamic descriptions** updating in real-time (battery %, juice ml, puffs remaining)
-- **Management menus**: fill juice, charge battery, install/remove coils/tanks
-- **Coil degradation** with puff counting and replacement
-- **Tank swapping** with capacity upgrades (5ml, 8ml, 12ml)
-- **Charger item** for battery restoration
-
-### 🏭 Crafting & Assembly System
-- **Placeable crafting tables** with SQL persistence (juice and vape tables)
-- **Owner-only pickup** protection with distance checks
-- **Table limit per player** (tracked via citizen ID)
-- **Multiple table types**: juice mixing, vape assembly
-- **Recipe system** for juices and devices with ingredients, craft times, and amounts
-- **Progress bars** for crafting (ox_lib or QB style)
-- **Job-locked static stations** with prop spawning and qb-target integration
-- **Batch crafting** for coils, tanks, bottles, and sets
-
-### 📦 Pack & Set System
-- **Starter sets** (box, disposable, weed) with opening progress and contents
-- **Coil packs** (3x, 6x, 10x) that unpack into individual coils
-- **Packaging crafting** for sets (box, disposable, weed)
-- **Empty bottles** in various sizes (30ml, 60ml, 120ml) for juice storage
-- **Device shells** and components (batteries, wiring, LCD) as craftable parts
-
-### 🛠️ Customization Options
-- **Multiple vape types**: disposable, weed pen, box mod
-- **Juice flavors** with effects, ml sizes, and types (regular/weed)
-- **Prop attachments** with configurable offsets and rotations
-- **Tank capacities** and coil lifespans per device
-- **Crafting ingredients** from base materials (plastic, copper, aluminum, etc.)
-
-### 📊 Integration Features
-- **QB Inventory sync** for item data and descriptions
-- **QB Target** for interactive zones and props
-- **OX Lib** for menus, notifications, and progress bars
-- **Stress relief** integration with qb-hud
-- **Debug mode** for development logging
+**Crafting Stations**
+- Three station types — Vape Juice Station, Vape Crafting Station, Concentrate Station — each definable as fixed job-locked/public world locations (`Config.CraftingStations`, `Config.VapeCraftingStations`, `Config.ConcentrateCraftingStations`) or as placeable items (`juice_table`, `vape_table`, `concentrate_table`) players can drop anywhere via qb-target
+- **Juice crafting**: combines base liquid, flavour concentrate, nicotine, and empty bottles into 60ml/120ml juice bottles or 30ml cannabis juices
+- **Vape crafting**: builds every hardware component from raw materials (copper, plastic, aluminum, iron, glass) — batteries, wiring, shells, LCD screens, tanks, coils (single and 3/6/10-packs), chargers — and assembles them into complete vapes, then into fully packaged starter sets (`box_set`, `dispo_set`, `weed_set`)
+- **Concentrate crafting**: processes raw fruit/sugar/mint items with water and solvent into flavour concentrates used by juice recipes
+- All recipes are job/grade-restricted per station and have configurable craft times and ingredient costs
 
 ---
 
 ## 📋 Requirements
 
-| Dependency | Version | Required |
-|------------|---------|----------|
-| QBCore Framework | Latest | ✅ Yes |
-| qb-inventory | Latest | ✅ Yes |
-| qb-target | Latest | ✅ Yes |
-| ox_lib | Latest | ✅ Yes |
-| oxmysql | Latest | ✅ Yes |
+| Dependency | Required |
+|---|---|
+| qb-core | Yes |
+| qb-target | Yes (crafting station interaction) |
+| qb-inventory | Yes |
+| ox_lib | Yes |
+| oxmysql | Yes |
 
 ---
 
 ## 🚀 Installation
 
-### 1️⃣ Download & Extract
-
 ```bash
-# Clone from GitHub
-git clone https://github.com/YourUsername/mnc-vapes.git
-
-# OR download ZIP from Releases
-```
-
-Place into your resources folder:
-```
+# Place into your resources folder
 [server-data]/resources/[custom]/mnc-vapes/
 ```
 
-### 2️⃣ Database Setup
-
-The script **automatically creates** required tables on first start:
-
-- `mnc_vapes_tables` - Stores placed crafting tables
-- `mnc_vape_data` - Tracks vape device states
-- `mnc_juice_data` - Tracks juice bottle states
-
-No manual SQL import needed!
-
-### 3️⃣ Add to Server Config
-
 ```lua
 # server.cfg
-ensure oxmysql
 ensure mnc-vapes
 ```
 
-### 4️⃣ Configure Settings
-
-Edit `config.lua` to customize:
-
-```lua
--- Debug settings
-Config.DebugMode = false
-
--- Main settings
-Config.PuffsPerMl = 25      -- max amount of puffs per 1ml of vape juice
-Config.ChargeTime = 80000   -- how long batterys take to charge
-Config.FillTime = 10000     -- how long it takes to refill a vape tank
-Config.CoilInstallTime = 5000    -- how long it takes to install coil
-Config.TankInstallTime = 5000    -- how long it takes to install tank
-Config.PuffCooldown = 5000    -- how long player must wait between puffs
-Config.PropBone = 18905   -- prop bone left hand
-
--- Job locked juice crafting location
-Config.CraftingStations = {
-    {
-        coords = vector3(2984.09, 4462.66, 48.64),   -- where prop spawns
-        heading = 180.0,                             -- prop rotation
-        label = 'Vape Juice Station',              -- qb-target label
-        job = 'vapeshop',                        -- job ristriction
-        minGrade = 0,                                 -- grade ristriction
-        prop = 'v_ret_ml_tablea',                 -- prop used
-    },
-    -- Add more if needed
-}
-
--- Placeable juice crafting table
-Config.PlaceableTableItem = 'juice_table'       -- qb-target tabel
-Config.TableProp = 'v_ret_ml_tablea'   -- prop used
-Config.TableModel = `v_ret_ml_tablea`   -- model used
-Config.TablePickupDistance = 2.2                 -- distance to interact
-
--- Tank options
-Config.Tanks = {
-    ['5ml_tank'] = {      -- tank item name
-      label = '5ml Tank',  -- tank label in menu
-      size = 5             -- ml the tank holds
-    },
-    -- Add more
-}
-
--- Vape settings
-Config.Vapes = {
-    ['dispo_vape'] = {                          -- item name
-        label = 'Disposable Vape',              -- menu label
-        prop = 'ba_prop_battle_vape_01',        -- prop used
-        tankSize = 5,                           -- fallback tank
-        mlPerPuff = 0.04,                       -- ml used per puff
-        maxCoilPuffs = 250,                     -- how many puffs the coil has
-        maxBattery = 100,                       -- max battery
-        canChangeCoil = false,                  -- keep false
-        canChangeTank = false,                  -- keep false
-        juiceType = 'regular',                  -- juice type allowed
-        puffAnimation = 'WORLD_HUMAN_SMOKING',  -- animation used
-        exhaleTime = 2000,                      -- smoke length
-        attachPos = {0.13, 0.03, 0.0},          -- x, y, z offsets
-        attachRot = {180.0, 230.0, 20.0},        -- pitch, roll, yaw rotations
-    },
-    -- Add more
-}
-
--- Juice settings
-Config.VapeJuices = {
-    ['juice_mango_30'] = {
-        label = 'Mango 30ml',
-        ml = 30,
-        type = 'regular',
-        effects = {
-            { name = 'runningSpeedIncrease', duration = 20000 },
-            -- Add more effects
-        },
-    },
-    -- Add more
-}
-
--- Crafting recipes
-Config.CraftingRecipes = {
-    {
-        result = 'juice_mango_30',
-        amount = 1,
-        time = 10000,
-        ingredients = {
-            { item = 'mango_extract', amount = 1 },
-            { item = 'base_liquid', amount = 30 }
-        }
-    },
-    -- Add more
-}
-
--- Vape crafting recipes
-Config.VapeCraftingRecipes = {
-    {
-        result = 'vape_battery',
-        amount = 1,
-        time = 5000,
-        ingredients = {
-            { item = 'copper', amount = 3 },
-            { item = 'plastic', amount = 2 }
-        }
-    },
-    -- Add more
-}
-```
-
-### 5️⃣ Add Items to QBCore
-
-Add all items from the config to `qb-core/shared/items.lua`. Examples:
-
-```lua
--- Vapes
-['dispo_vape'] = {
-    ['name'] = 'dispo_vape',
-    ['label'] = 'Disposable Vape',
-    ['weight'] = 100,
-    ['type'] = 'item',
-    ['image'] = 'dispo_vape.png',
-    ['unique'] = true,
-    ['useable'] = true,
-    ['shouldClose'] = true,
-    ['description'] = 'Disposable vaping device'
-},
-
--- Juices
-['juice_mango_30'] = {
-    ['name'] = 'juice_mango_30',
-    ['label'] = 'Mango Juice 30ml',
-    ['weight'] = 50,
-    ['type'] = 'item',
-    ['image'] = 'juice_mango_30.png',
-    ['unique'] = false,
-    ['useable'] = true,
-    ['shouldClose'] = true,
-    ['description'] = 'Mango flavored vape juice'
-},
-
--- Components
-['vape_coil'] = {
-    ['name'] = 'vape_coil',
-    ['label'] = 'Vape Coil',
-    ['weight'] = 20,
-    ['type'] = 'item',
-    ['image'] = 'vape_coil.png',
-    ['unique'] = false,
-    ['useable'] = true,
-    ['shouldClose'] = true,
-    ['description'] = 'Replacement coil for vapes'
-},
-
--- Tables
-['juice_table'] = {
-    ['name'] = 'juice_table',
-    ['label'] = 'Juice Crafting Table',
-    ['weight'] = 5000,
-    ['type'] = 'item',
-    ['image'] = 'juice_table.png',
-    ['unique'] = true,
-    ['useable'] = true,
-    ['shouldClose'] = true,
-    ['description'] = 'Portable table for mixing vape juices'
-},
-```
+This resource auto-creates its database tables (`mnc_vape_data`, `mnc_juice_data`) on startup via `CREATE TABLE IF NOT EXISTS` — no manual SQL import needed. `install/items.txt` contains ~70+ ready-to-paste QBCore item entries (vapes, juices, crafting components, packaging, starter sets, and raw ingredients like fruit/flavour concentrates) that must be added to your `qb-core` shared items before use; `install/images/` ships matching item icons.
 
 ---
 
 ## ⚙️ Configuration Guide
 
-### 🎯 Vape Item Configuration
-
 ```lua
-['dispo_vape'] = {
-    label = 'Disposable Vape',
-    prop = 'ba_prop_battle_vape_01',
-    tankSize = 5,
-    mlPerPuff = 0.04,
-    maxCoilPuffs = 250,
-    maxBattery = 100,
-    canChangeCoil = false,
-    canChangeTank = false,
-    juiceType = 'regular',
-    puffAnimation = 'WORLD_HUMAN_SMOKING',
-    exhaleTime = 2000,
-    attachPos = {0.13, 0.03, 0.0},
-    attachRot = {180.0, 230.0, 20.0},
-}
+Config.PuffsPerMl      = 25      -- max puffs per 1ml of vape juice
+Config.ChargeTime      = 80000   -- ms to fully charge a battery
+Config.FillTime        = 10000   -- ms to refill a tank
+Config.PuffCooldown    = 5000    -- ms between puffs
 ```
 
-### 🧪 Juice Item Configuration
-
 ```lua
-['juice_mango_30'] = {
-    label = 'Mango 30ml',
-    ml = 30,
-    type = 'regular',
-    effects = {
-        { name = 'runningSpeedIncrease', duration = 20000 },
-        { name = 'infiniteStamina', duration = 20000 },
-        { name = 'moreStrength', duration = 20000 },
-        { name = 'healthRegen', duration = 20000 },
-        { name = 'foodRegen', duration = 20000 },
-        { name = 'drunkWalk', duration = 20000 },
-        { name = 'psycoWalk', duration = 20000 },
-        { name = 'outOfBody', duration = 20000 },
-        { name = 'cameraShake', duration = 20000 },
-        { name = 'fogEffect', duration = 20000 },
-        { name = 'confusionEffect', duration = 20000 },
-        { name = 'white', duration = 20000 },
+Config.Vapes = {
+    ['box_vape'] = {
+        label = 'Box Vape',
+        tankSize = 5,
+        mlPerPuff = 0.04,
+        maxCoilPuffs = 500,
+        maxBattery = 250,
+        canChangeCoil = true,
+        canChangeTank = true,
+        juiceType = 'regular',
+        puffAnimation = 'WORLD_HUMAN_SMOKING',
     },
 }
 ```
 
-### 🏭 Crafting Recipe Configuration
-
 ```lua
--- Juice Recipes
-Config.CraftingRecipes = {
-    {
-        result = 'juice_mango_30',
-        amount = 1,
-        time = 10000,
-        ingredients = {
-            { item = 'mango_extract', amount = 1 },
-            { item = 'base_liquid', amount = 30 }
-        }
-    },
-    -- Add more
-}
-
--- Vape Recipes
-Config.VapeCraftingRecipes = {
-    {
-        result = 'vape_battery',
-        amount = 1,
-        time = 5000,
-        ingredients = {
-            { item = 'copper', amount = 3 },
-            { item = 'plastic', amount = 2 }
-        }
-    },
-    -- Add more
+Config.CraftingStations = {
+    { coords = vector3(377.54, -820.07, 29.3), heading = 90.0, label = 'Vape Juice Station', job = 'bestbudz', minGrade = 0, prop = 'v_ret_ml_tablea' },
+    { coords = vector3(481.46, -570.84, 28.92), heading = 85.0, label = 'Vape Juice Station', prop = 'v_ret_ml_tablea' }, -- no job = public
 }
 ```
 
 ---
 
-## 📜 Changelog
+## 🎮 Controls & Usage
 
-### Version 1.0.0
-**New Features:**
-- ✨ Initial release with core vaping system
-- ✨ Added craftable vapes (disposable, weed pen, box mod)
-- ✨ Implemented juice crafting with multiple flavors and effects
-- ✨ Created persistent device management with DB tracking
-- ✨ Added placeable tables for juice and vape crafting
-- ✨ Implemented management menus for filling, charging, parts installation
-- ✨ Added pack opening for sets and coil packs
-- ✨ Created component crafting (batteries, coils, tanks, bottles)
-
-**Improvements:**
-- 🔧 Optimized client-side animations and particle effects
-- 🔧 Enhanced server-side data caching for performance
-- 🔧 Added job restrictions for static stations
-- 🔧 Improved notification system with ox_lib
-
-**Bug Fixes:**
-- 🐛 Fixed vape props not attaching properly
-- 🐛 Resolved data not saving on server restart
-- 🐛 Corrected crafting progress bars not canceling
-- 🐛 Fixed table props duplicating on placement
-- 🐛 Resolved juice filling not updating descriptions
-- 🐛 Fixed coil degradation not tracking puffs
-- 🐛 Corrected tank removal not preserving juice
+- **Use a vape item from your inventory** to equip and start puffing (`WORLD_HUMAN_SMOKING` animation)
+- **qb-target on an equipped vape / crafting table** — opens the relevant status/crafting menu (fill juice, charge, swap coil/tank, craft recipes)
+- **Placeable table items** (`juice_table`, `vape_table`, `concentrate_table`) are used from the inventory to drop a portable crafting station anywhere
 
 ---
 
-## ⚠️ Important Notes
+## 🔧 Troubleshooting
 
-1. **Server Performance**: Tested stable with 128+ players
-2. **Database**: Requires oxmysql - MariaDB 10.3+ recommended
-3. **Compatibility**: QBCore only - not compatible with ESX
-4. **Legal**: For use on FiveM servers only, respect Rockstar's ToS
-5. **Support**: Community-driven, no official warranty provided
+- **Crafting station has no options** — check the station's `job`/`minGrade` restriction in config; leaving `job` unset makes it public.
+- **Vape state doesn't persist across sessions** — confirm `oxmysql` is connected and the `mnc_vape_data`/`mnc_juice_data` tables were created (check console on resource start for the confirmation print).
+- **Items missing from inventory menus** — verify every entry from `install/items.txt` was added to your shared items; many crafting recipes reference items (e.g. `weed_stems`, raw fruit) that may already exist if you run `mnc-drugeffects`.
+- **Coil/tank options missing on a vape** — only vapes with `canChangeCoil`/`canChangeTank = true` (currently `box_vape`) expose swap options; disposables are fixed by design.
 
 ---
 
-**Enjoy realistic vaping mechanics on your FiveM server! 💨**
+## 📝 Credits & License
+
+**Author**: Stan Leigh
+**Version**: 1.0.0
+**Framework**: QBCore
+
+Distributed as part of the MnCLosSantos mod-dump collection — open source, please credit the original author if you edit and re-release.
