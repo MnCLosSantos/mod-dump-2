@@ -4,7 +4,7 @@
 [![QBCore](https://img.shields.io/badge/Framework-QBCore-blue.svg)](https://github.com/qbcore-framework)
 [![Resources](https://img.shields.io/badge/Resources-28-brightgreen.svg)]()
 
-<img width="1920" height="1080" alt="thumb42069" src="https://github.com/user-attachments/assets/38efbc34-bf00-4f68-85ef-1761eb5b5423" />
+<img width="1920" height="1080" alt="2" src="https://github.com/user-attachments/assets/41a3d656-a0f2-46d9-828e-16a977d33a8a" />
 
 ---
 
