@@ -2,7 +2,7 @@
 
 [![FiveM](https://img.shields.io/badge/FiveM-Ready-green.svg)](https://fivem.net/)
 [![QBCore](https://img.shields.io/badge/Framework-QBCore-blue.svg)](https://github.com/qbcore-framework)
-[![Resources](https://img.shields.io/badge/Resources-28-brightgreen.svg)]()
+[![Resources](https://img.shields.io/badge/Resources-29-brightgreen.svg)]()
 
 <img width="1920" height="1080" alt="2" src="https://github.com/user-attachments/assets/41a3d656-a0f2-46d9-828e-16a977d33a8a" />
 
@@ -10,7 +10,7 @@
 
 ## 🌟 Overview
 
-A collection of 28 completed, standalone FiveM scripts built for QBCore servers — covering drift/performance vehicle modding, HUDs and gauges, vehicle management and economy systems, job/business scripts, and roleplay interaction tools. Each resource lives in its own folder with its own README covering setup, configuration, and usage in detail.
+A collection of 29 completed, standalone resources — 28 FiveM scripts built for QBCore servers, plus standalone browser tools — covering drift/performance vehicle modding, HUDs and gauges, vehicle management and economy systems, job/business scripts, roleplay interaction tools, and utility tools. Each resource lives in its own folder with its own README covering setup, configuration, and usage in detail.
 
 ---
 
@@ -71,6 +71,14 @@ Mechanic-installable, tiered vehicle modification kits with install/remove minig
 | [mnc-scrapnbins](./mnc-scrapnbins) | Searchable dumpster/scrap-wreck props with minigame skill checks, tiered loot, and a needle-prick injury hazard. |
 | [mnc-vapes](./mnc-vapes) | Full vape roleplay system — puffing, battery/coil/tank management, and juice/vape/concentrate crafting stations. |
 
+### 🧰 Tools & Utilities
+
+Standalone browser-based tools — no FiveM/QBCore dependency, just open the HTML file.
+
+| Resource | Description |
+|---|---|
+| [mnc-voiceaibatcher](./mnc-voiceaibatcher) | Standalone HTML batch text-to-speech tool powered by the FineVoice API — turns up to 25 numbered lines/paragraphs into individual audio files, with a searchable/testable voice browser, emotion tags, and one-click "download all as ZIP". |
+
 ---
 
 ## 📋 Common Requirements
@@ -86,6 +94,8 @@ Most resources in this collection are built for **QBCore** and lean on a shared 
 | qb-inventory | Resources with craftable/consumable items (vapes, dogends) |
 
 Many mod-kit resources (2step, anglekit, antilag, diffs, drivelines, hydros, customplate, parking, etc.) also ship an `install/items.txt` file listing the QBCore items to add.
+
+The **Tools & Utilities** category is the exception — `mnc-voiceaibatcher` is a plain HTML/JS file with no QBCore, ox_lib, oxmysql, or FiveM dependency at all; it just needs a browser and a FineVoice API key. See its own README for details.
 
 ---
 
@@ -105,6 +115,8 @@ ensure mnc-<resource-name>
 
 Open each resource's own README for its specific database/items setup before starting it.
 
+Tools under **Tools & Utilities** (like `mnc-voiceaibatcher`) aren't FiveM resources — there's nothing to `ensure`. Just open the folder's `.html` file directly in a browser; see its own README for usage.
+
 ---
 
 ## 📝 Credits & License
@@ -113,3 +125,5 @@ Open each resource's own README for its specific database/items setup before sta
 **Framework**: QBCore
 
 All resources in this collection are open source. If you edit and redistribute any of them, please credit the original author.
+
+---
